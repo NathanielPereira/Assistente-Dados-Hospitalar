@@ -1,0 +1,17 @@
+name: masking_per_layer
+config_version: 1.0
+class_name: Checkpoint
+run_name_template: masking-validation-
+validations:
+  - batch_request:
+      datasource_name: bronze_source
+      data_asset_name: pacientes
+    expectation_suite_name: bronze_masking_suite
+  - batch_request:
+      datasource_name: prata_source
+      data_asset_name: atendimentos
+    expectation_suite_name: prata_masking_suite
+  - batch_request:
+      datasource_name: ouro_source
+      data_asset_name: indicadores
+    expectation_suite_name: ouro_masking_suite

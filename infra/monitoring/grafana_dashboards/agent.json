@@ -1,0 +1,54 @@
+{
+  "title": "Assistente de Dados - Observability",
+  "panels": [
+    {
+      "id": 1,
+      "title": "Uptime %",
+      "type": "stat",
+      "targets": [
+        {
+          "expr": "uptime_percent",
+          "legendFormat": "Uptime"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Latência p95 (ms)",
+      "type": "graph",
+      "targets": [
+        {
+          "expr": "p95_latency_ms",
+          "legendFormat": "p95"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Status Integrações",
+      "type": "table",
+      "targets": [
+        {
+          "expr": "integration_status",
+          "legendFormat": "{{integration}}"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Modo Degradado",
+      "type": "stat",
+      "targets": [
+        {
+          "expr": "degraded_mode",
+          "legendFormat": "Ativo"
+        }
+      ]
+    }
+  ],
+  "refresh": "5s",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  }
+}

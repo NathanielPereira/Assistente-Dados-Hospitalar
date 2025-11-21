@@ -1,0 +1,27 @@
+# Alert Rules para Assistente de Dados Hospitalar
+
+alerts:
+  - name: high_latency
+    condition: p95_latency_ms > 2000
+    severity: WARNING
+    message: "Latência p95 acima de 2s"
+    
+  - name: degraded_mode_activated
+    condition: degraded_mode == true
+    severity: HIGH
+    message: "Sistema em modo degradado read-only"
+    
+  - name: integration_failure
+    condition: integration.status == "failed"
+    severity: CRITICAL
+    message: "Integração {integration.name} falhou"
+    
+  - name: low_uptime
+    condition: uptime_percent < 99.0
+    severity: HIGH
+    message: "Uptime abaixo de 99%"
+    
+  - name: audit_export_failure
+    condition: audit_export_errors > 5
+    severity: MEDIUM
+    message: "Múltiplas falhas em exportação de auditoria"

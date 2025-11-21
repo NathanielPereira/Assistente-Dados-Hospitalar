@@ -31,7 +31,11 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+- **Proteção Integral de Dados Clínicos**: o plano documenta base legal, minimização de dados e controles de criptografia ponta a ponta?
+- **Auditoria Automatizada e Rastreamento**: cada fluxo define eventos imutáveis, IDs de execução e como exportar trilhas?
+- **Evidências e Testes Dirigindo Entregas**: há datasets de referência, métricas-alvo e estratégia de testes que falham antes do código?
+- **Interoperabilidade Modular**: contratos externos estão versionados (FHIR/HL7/API), com adaptação clara e plano para breaking changes?
+- **Observabilidade e Resiliência**: SLOs, alertas, feature flags e playbooks de recuperação foram especificados?
 
 ## Project Structure
 

@@ -25,6 +25,14 @@ description: "Task list template for feature implementation"
 - **Mobile**: `api/src/`, `ios/src/` or `android/src/`
 - Paths shown below assume single project - adjust based on plan.md structure
 
+## Verificações Constitucionais (preencher antes de distribuir tarefas)
+
+- [ ] Dados clínicos protegidos: tarefas cobrem criptografia, mascaramento e revisões de privacidade?
+- [ ] Auditoria: existem tarefas para eventos imutáveis e exportações rastreáveis?
+- [ ] Evidências/Testes: suites e datasets estão descritos antes da implementação?
+- [ ] Interoperabilidade: contratos (FHIR/HL7/API) e migrações estão nas tarefas?
+- [ ] Observabilidade/Resiliência: métricas, alertas, feature flags e playbooks constam?
+
 <!-- 
   ============================================================================
   IMPORTANT: The tasks below are SAMPLE TASKS for illustration purposes only.

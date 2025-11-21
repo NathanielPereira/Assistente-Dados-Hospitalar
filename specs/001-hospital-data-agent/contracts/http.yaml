@@ -1,0 +1,131 @@
+openapi: 3.0.3
+info:
+  title: Assistente de Dados Hospitalar API
+  version: 0.1.0
+servers:
+  - url: https://api-demo.hospital-agent.render.com
+paths:
+  /v1/chat/sessions:
+    post:
+      summary: Inicia uma QuerySession de chat clínico
+      description: Recebe pergunta em linguagem natural e retorna ID de sessão + canal de streaming SSE.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [question, role]
+              properties:
+                question:
+                  type: string
+                role:
+                  type: string
+                  enum: [CONSULTOR, ANALISTA, COMPLIANCE]
+                contextFilters:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '201':
+          description: Sessão criada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sessionId:
+                    type: string
+                  streamUrl:
+                    type: string
+        '400':
+          description: Pergunta bloqueada (PII ou política)
+  /v1/chat/sessions/{sessionId}/stream:
+    get:
+      summary: Stream de chunks da resposta
+      parameters:
+        - in: path
+          name: sessionId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Fluxo SSE com campos data/sql/documentos
+  /v1/sql/assist:
+    post:
+      summary: Sugere e executa consultas SQL
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [prompt, tables]
+              properties:
+                prompt:
+                  type: string
+                tables:
+                  type: array
+                  items:
+                    type: string
+                autoExecute:
+                  type: boolean
+                  default: false
+      responses:
+        '200':
+          description: Consulta sugerida e, se aprovada, resultado agregado
+  /v1/sql/sessions/{sessionId}/approve:
+    post:
+      summary: Aprova execução de SQL sugerido
+      parameters:
+        - in: path
+          name: sessionId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [approvedSql]
+              properties:
+                approvedSql:
+                  type: string
+      responses:
+        '202':
+          description: Execução em andamento
+  /v1/audit/exports:
+    get:
+      summary: Exporta auditoria em CSV ou JSON
+      parameters:
+        - in: query
+          name: startDate
+          required: true
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: endDate
+          required: true
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: format
+          schema:
+            type: string
+            enum: [csv, json]
+      responses:
+        '200':
+          description: URL temporária para download
+  /v1/observability/health:
+    get:
+      summary: Health + métricas SLO
+      responses:
+        '200':
+          description: Disponibilidade, latência e flags de degradação
+
+

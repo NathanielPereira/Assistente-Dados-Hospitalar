@@ -1,0 +1,1 @@
+packages:\n  - 'apps/frontend-next'\n  - 'apps/backend-fastapi'

@@ -1,0 +1,30 @@
+# Assistente de Dados para Hospitais Development Guidelines
+
+Auto-generated from all feature plans. Last updated: 2025-11-20
+
+## Active Technologies
+
+- Python 3.11 (backend FastAPI + LangChain), Node.js 20 / Next.js 14 (frontend) + LangChain SQLAgent, OpenAI-compatible LLM provider, FastAPI, Next.js App Router, NeonDB/PostgreSQL client, Redis-compatible cache (Upstash) para sessão, Great Expectations para validação de dados (001-hospital-data-agent)
+
+## Project Structure
+
+```text
+backend/
+frontend/
+tests/
+```
+
+## Commands
+
+cd src [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNOLOGIES] pytest [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNOLOGIES] ruff check .
+
+## Code Style
+
+Python 3.11 (backend FastAPI + LangChain), Node.js 20 / Next.js 14 (frontend): Follow standard conventions
+
+## Recent Changes
+
+- 001-hospital-data-agent: Added Python 3.11 (backend FastAPI + LangChain), Node.js 20 / Next.js 14 (frontend) + LangChain SQLAgent, OpenAI-compatible LLM provider, FastAPI, Next.js App Router, NeonDB/PostgreSQL client, Redis-compatible cache (Upstash) para sessão, Great Expectations para validação de dados
+
+<!-- MANUAL ADDITIONS START -->
+<!-- MANUAL ADDITIONS END -->

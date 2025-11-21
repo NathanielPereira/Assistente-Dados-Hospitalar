@@ -100,6 +100,16 @@
 - **[Entity 1]**: [What it represents, key attributes without implementation]
 - **[Entity 2]**: [What it represents, relationships to other entities]
 
+## Conformidade Constitucional *(preencha obrigatoriamente)*
+
+| Princípio | Evidência nesta especificação |
+|-----------|------------------------------|
+| Proteção Integral de Dados Clínicos | [Como o requisito garante criptografia, minimização e base legal] |
+| Auditoria Automatizada e Rastreamento | [Eventos imutáveis, IDs, exportação de trilhas] |
+| Evidências e Testes Dirigindo Entregas | [Datasets de referência, métricas, estratégia de testes] |
+| Interoperabilidade Modular Hospitalar | [Contratos/versionamento/interfaces afetadas] |
+| Observabilidade e Resiliência Operacional | [SLOs, alertas, feature flags, playbooks] |
+
 ## Success Criteria *(mandatory)*
 
 <!--

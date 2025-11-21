@@ -1,0 +1,25 @@
+[tool.poetry]
+name = "backend-fastapi"
+version = "0.1.0"
+description = "Assistente de Dados Hospitalar - backend FastAPI"
+authors = ["User <user@example.com>"]
+packages = [{ include = "src" }]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+fastapi = "^0.110.0"
+uvicorn = { extras = ["standard"], version = "^0.30.0" }
+langchain = "^1.0.0"
+langchain-openai = "^1.0.0"
+langchain-community = "^0.4.0"
+psycopg = {extras = ["binary"], version = "^3.1"}
+pydantic = "^2.7"
+python-dotenv = "^1.0.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.2"
+pytest-asyncio = "^0.23"
+
+[build-system]
+requires = ["poetry-core>=1.8.0"]
+build-backend = "poetry.core.masonry.api"

@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: hospital-assistant-backend
+    env: python
+    buildCommand: |
+      cd apps/backend-fastapi
+      pip install poetry
+      poetry install --no-dev
+      poetry run python -m uvicorn src.api.main:app --host 0.0.0.0 --port $PORT
+    startCommand: |
+      cd apps/backend-fastapi
+      poetry run python -m uvicorn src.api.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: ENVIRONMENT
+        value: production
+    healthCheckPath: /health
+
