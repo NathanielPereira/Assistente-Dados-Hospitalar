@@ -1,14 +1,20 @@
-# 🏥 Hospital Data Assistant - AI-Powered Healthcare Analytics Platform
+# 🏥 Assistente de Dados Hospitalar - Plataforma de Analytics com IA
 
 [![Python](https://img.shields.io/badge/Python-3.11-blue.svg)](https://www.python.org/)
 [![Next.js](https://img.shields.io/badge/Next.js-14-black.svg)](https://nextjs.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.104-green.svg)](https://fastapi.tiangolo.com/)
 [![LangChain](https://img.shields.io/badge/LangChain-1.0-orange.svg)](https://www.langchain.com/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-blue.svg)](https://www.postgresql.org/)
-[![AWS](https://img.shields.io/badge/AWS-ECS-orange.svg)](https://aws.amazon.com/)
+[![Vercel](https://img.shields.io/badge/Vercel-Deployed-black.svg)](https://vercel.com/)
+[![Render](https://img.shields.io/badge/Render-Deployed-46e3b7.svg)](https://render.com/)
 [![Docker](https://img.shields.io/badge/Docker-Ready-blue.svg)](https://www.docker.com/)
 
 > **Sistema inteligente de assistência a dados hospitalares** que combina **LangChain SQLAgent** e **RAG (Retrieval Augmented Generation)** para responder perguntas clínicas e operacionais em linguagem natural, com **compliance LGPD/HIPAA**, **auditoria completa** e **observabilidade em tempo real**.
+
+**🌐 Aplicação em Produção:**
+- **Frontend**: [https://assistente-dados-hospitalar.vercel.app](https://assistente-dados-hospitalar.vercel.app)
+- **Backend API**: [https://assistente-dados-hospitalar.onrender.com](https://assistente-dados-hospitalar.onrender.com)
+- **Documentação FastAPI**: [https://assistente-dados-hospitalar.onrender.com/docs](https://assistente-dados-hospitalar.onrender.com/docs)
 
 ---
 
@@ -21,7 +27,9 @@ Este projeto demonstra uma **arquitetura moderna de IA aplicada à saúde**, int
 - **🌐 Streaming em Tempo Real**: Server-Sent Events (SSE) para respostas instantâneas
 - **🔒 Compliance**: LGPD/HIPAA com auditoria completa e trilhas imutáveis
 - **📊 Observabilidade**: Métricas SLO, alertas e painel de monitoramento
-- **☁️ Cloud-Native**: Deploy na AWS com ECS Fargate, ECR e Terraform
+- **☁️ Cloud-Native**: Deploy na Vercel (frontend) e Render (backend)
+
+> **💡 Desenvolvido com Speckit**: Este projeto foi desenvolvido com a ajuda do **Speckit**, uma ferramenta poderosa de desenvolvimento assistido por IA que acelerou significativamente o processo de desenvolvimento, desde a arquitetura inicial até a implementação de funcionalidades complexas.
 
 ---
 
@@ -34,6 +42,7 @@ Este projeto demonstra uma **arquitetura moderna de IA aplicada à saúde**, int
 - **PostgreSQL** (NeonDB) com schemas multi-camada (bronze/prata/ouro)
 - **psycopg3** (async database driver)
 - **Poetry** (gerenciamento de dependências)
+- **FastAPI Docs** (Swagger/OpenAPI automático em `/docs`)
 
 ### Frontend & UX
 - **Next.js 14** (App Router, Server Components)
@@ -44,11 +53,10 @@ Este projeto demonstra uma **arquitetura moderna de IA aplicada à saúde**, int
 
 ### DevOps & Cloud
 - **Docker** (containerização)
-- **AWS ECS Fargate** (orquestração de containers)
-- **AWS ECR** (registry de imagens)
-- **Terraform** (Infrastructure as Code)
-- **CloudWatch** (logs e métricas)
-- **VPC, Security Groups, ALB** (networking e segurança)
+- **Vercel** (deploy automático do frontend via GitHub)
+- **Render** (deploy automático do backend via GitHub)
+- **NeonDB** (PostgreSQL serverless)
+- **GitHub Actions** (CI/CD)
 
 ### Qualidade & Compliance
 - **pytest** (testes unitários e de integração)
@@ -66,6 +74,7 @@ Este projeto demonstra uma **arquitetura moderna de IA aplicada à saúde**, int
 - Respostas combinando **dados estruturados (SQL)** + **documentos (RAG)**
 - **Cards visuais** para métricas agregadas (ocupação, receita, contagens)
 - Detecção automática de intenção e agregação inteligente
+- Respostas formatadas em cards únicos com valores finais
 
 ### 2. 🔧 SQL Workbench Assistido por IA
 - Geração automática de SQL com **LangChain SQLAgent**
@@ -85,14 +94,14 @@ Este projeto demonstra uma **arquitetura moderna de IA aplicada à saúde**, int
 
 ```
 ┌─────────────────┐
-│   Next.js 14    │  Frontend (Vercel/AWS)
-│   (React/TS)    │
+│   Next.js 14    │  Frontend (Vercel)
+│   (React/TS)    │  https://assistente-dados-hospitalar.vercel.app
 └────────┬────────┘
          │ SSE Streaming
          │ REST API
 ┌────────▼────────┐
-│   FastAPI       │  Backend (AWS ECS Fargate)
-│   + LangChain   │
+│   FastAPI       │  Backend (Render)
+│   + LangChain   │  https://assistente-dados-hospitalar.onrender.com
 └────────┬────────┘
          │
     ┌────┴────┬──────────┬──────────┐
@@ -110,6 +119,29 @@ Este projeto demonstra uma **arquitetura moderna de IA aplicada à saúde**, int
 
 ---
 
+## 📚 Documentação da API
+
+A documentação interativa do FastAPI está disponível em:
+
+- **Swagger UI**: [https://assistente-dados-hospitalar.onrender.com/docs](https://assistente-dados-hospitalar.onrender.com/docs)
+- **ReDoc**: [https://assistente-dados-hospitalar.onrender.com/redoc](https://assistente-dados-hospitalar.onrender.com/redoc)
+
+### Principais Endpoints
+
+#### Chat
+- `POST /v1/chat/sessions` - Criar nova sessão de chat
+- `POST /v1/chat/stream` - Stream de respostas do chat (SSE)
+
+#### SQL Workbench
+- `POST /v1/sql/assist` - Gerar sugestão de SQL com IA
+- `POST /v1/sql/execute` - Executar query SQL aprovada
+
+#### Compliance
+- `GET /v1/audit/exports` - Exportar trilhas de auditoria (CSV/JSON)
+- `GET /v1/observability/health` - Health check e métricas SLO
+
+---
+
 ## 🛠️ Setup Local
 
 ### Pré-requisitos
@@ -122,8 +154,8 @@ Este projeto demonstra uma **arquitetura moderna de IA aplicada à saúde**, int
 
 ```bash
 # Clone o repositório
-git clone https://github.com/seu-usuario/hospital-data-assistant.git
-cd hospital-data-assistant
+git clone https://github.com/NathanielPereira/Assistente-Dados-Hospitalar.git
+cd Assistente-Dados-Hospitalar
 
 # Backend
 cd apps/backend-fastapi
@@ -163,44 +195,33 @@ docker-compose up --build
 # Acesse:
 # Frontend: http://localhost:3000
 # Backend: http://localhost:8000
+# Docs: http://localhost:8000/docs
 ```
 
 ---
 
-## ☁️ Deploy na AWS
+## ☁️ Deploy em Produção
 
-### Pré-requisitos
-- AWS CLI configurado
-- Terraform instalado
-- Docker instalado
-- Credenciais AWS com permissões adequadas
+### Frontend (Vercel)
 
-### Passos
+1. Conecte seu repositório GitHub ao Vercel
+2. Configure variáveis de ambiente:
+   - `NEXT_PUBLIC_API_URL=https://seu-backend.onrender.com`
+3. Deploy automático a cada push!
 
-1. **Configure variáveis do Terraform**:
-```bash
-cd infra/terraform
-terraform init
-```
+### Backend (Render)
 
-2. **Configure variáveis**:
-```bash
-export TF_VAR_database_url="postgresql://..."
-export TF_VAR_openai_api_key="sk-..."
-export AWS_REGION="us-east-1"
-```
+1. Conecte seu repositório GitHub ao Render
+2. Configure como **Web Service**
+3. Configure variáveis de ambiente:
+   - `DATABASE_URL=postgresql://...`
+   - `OPENAI_API_KEY=sk-...`
+   - `ENVIRONMENT=production`
+4. Deploy automático a cada push!
 
-3. **Execute o script de deploy**:
-```bash
-chmod +x infra/aws/deploy.sh
-./infra/aws/deploy.sh
-```
-
-O script irá:
-- Criar repositórios ECR
-- Build e push das imagens Docker
-- Deploy da infraestrutura com Terraform
-- Criar ECS services, ALB, VPC, Security Groups
+**Arquivos de configuração:**
+- `render.yaml` - Configuração do Render
+- `vercel.json` - Configuração do Vercel
 
 ---
 
@@ -241,16 +262,6 @@ great_expectations checkpoint run
 
 ---
 
-## 📚 Documentação Adicional
-
-- [Especificação Completa](specs/001-hospital-data-agent/spec.md)
-- [Plano de Implementação](specs/001-hospital-data-agent/plan.md)
-- [Guia de Setup](SETUP.md)
-- [Guia de Testes](TESTING.md)
-- [Runbooks Operacionais](docs/runbooks/)
-
----
-
 ## 🎓 Habilidades Demonstradas
 
 Este projeto demonstra proficiência em:
@@ -266,12 +277,13 @@ Este projeto demonstra proficiência em:
 - Prompt Engineering
 - LLM Integration (OpenAI)
 - Natural Language Processing
+- Geração inteligente de SQL a partir de linguagem natural
 
 ### DevOps & Cloud
 - Containerização (Docker)
-- Infrastructure as Code (Terraform)
-- AWS Services (ECS, ECR, VPC, ALB, CloudWatch)
-- CI/CD pipelines
+- Deploy automático (Vercel + Render)
+- CI/CD com GitHub Actions
+- Gerenciamento de variáveis de ambiente
 
 ### Qualidade & Segurança
 - Testes automatizados (unit, integration, E2E)
@@ -283,7 +295,7 @@ Este projeto demonstra proficiência em:
 - Next.js 14 (App Router)
 - TypeScript
 - Responsive Design
-- Real-time Updates
+- Real-time Updates (SSE)
 
 ---
 
@@ -301,21 +313,32 @@ Este projeto é um **demonstrativo técnico** com dados fictícios, criado para 
 
 ## 👤 Autor
 
-**Seu Nome**
-- LinkedIn: [seu-perfil](https://linkedin.com/in/seu-perfil)
-- GitHub: [@seu-usuario](https://github.com/seu-usuario)
-- Email: seu.email@example.com
+**Nathaniel Pereira**
+- GitHub: [@NathanielPereira](https://github.com/NathanielPereira)
+- Repositório: [Assistente-Dados-Hospitalar](https://github.com/NathanielPereira/Assistente-Dados-Hospitalar)
 
 ---
 
 ## 🌟 Destaques do Projeto
 
-- ✅ **100% Funcional**: Sistema completo e operacional
-- ✅ **Production-Ready**: Pronto para deploy em produção
-- ✅ **Bem Documentado**: Código limpo e documentação completa
+- ✅ **100% Funcional**: Sistema completo e operacional em produção
+- ✅ **Production-Ready**: Deployado na Vercel e Render
+- ✅ **Bem Documentado**: Código limpo e documentação completa (incluindo FastAPI Docs)
 - ✅ **Testado**: Cobertura de testes adequada
 - ✅ **Escalável**: Arquitetura preparada para crescimento
 - ✅ **Seguro**: Compliance LGPD/HIPAA implementado
+- ✅ **Inteligente**: IA capaz de entender perguntas em linguagem natural e gerar SQL preciso
+
+---
+
+## 🛠️ Ferramentas Utilizadas
+
+- **Speckit**: Desenvolvimento assistido por IA que acelerou significativamente o processo de desenvolvimento
+- **Vercel**: Deploy automático do frontend Next.js
+- **Render**: Deploy automático do backend FastAPI
+- **NeonDB**: Banco de dados PostgreSQL serverless
+- **OpenAI**: API de LLM para LangChain
+- **GitHub**: Controle de versão e CI/CD
 
 ---
 
