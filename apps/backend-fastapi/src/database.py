@@ -41,7 +41,14 @@ class Database:
     @asynccontextmanager
     async def get_connection(self) -> AsyncGenerator[AsyncConnection, None]:
         """Context manager para obter conexão."""
-        if self._conn is None:
+        if self._conn is None or self._conn.closed:
+            await self.connect()
+        
+        # Garante que a conexão está ativa
+        try:
+            if self._conn.closed:
+                await self.connect()
+        except:
             await self.connect()
         
         yield self._conn
@@ -49,13 +56,15 @@ class Database:
     async def execute_query(self, query: str, params: tuple = ()) -> list[dict]:
         """Executa query e retorna resultados como lista de dicionários."""
         async with self.get_connection() as conn:
-            async with conn.cursor() as cur:
-                await cur.execute(query, params)
-                if cur.description:
-                    columns = [desc[0] for desc in cur.description]
-                    rows = await cur.fetchall()
-                    return [dict(zip(columns, row)) for row in rows]
-                return []
+            # Usa autocommit para evitar idle-in-transaction timeout
+            async with conn.transaction():
+                async with conn.cursor() as cur:
+                    await cur.execute(query, params)
+                    if cur.description:
+                        columns = [desc[0] for desc in cur.description]
+                        rows = await cur.fetchall()
+                        return [dict(zip(columns, row)) for row in rows]
+                    return []
 
     async def execute_one(self, query: str, params: tuple = ()) -> dict | None:
         """Executa query e retorna um único resultado."""

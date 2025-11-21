@@ -52,7 +52,6 @@ app.add_middleware(
         "http://localhost:3001",
         "https://*.vercel.app",  # Vercel deployments
         "https://assistente-dados-hospitalar.vercel.app",  # Seu domínio específico
-        "https://assistente-dados-hospitalar-*.vercel.app",  # Preview deployments
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -74,10 +73,22 @@ async def root():
 async def health():
     """Health check com status do banco de dados."""
     try:
+        # Testa conexão com query simples e timeout curto
         result = await db.execute_one("SELECT 1 as healthy")
         db_status = "connected" if result else "disconnected"
     except Exception as e:
-        db_status = f"error: {str(e)[:50]}"
+        error_msg = str(e)
+        # Se for erro de conexão idle, tenta reconectar
+        if "idle-in-transaction" in error_msg.lower() or "terminating connection" in error_msg.lower():
+            try:
+                await db.disconnect()
+                await db.connect()
+                result = await db.execute_one("SELECT 1 as healthy")
+                db_status = "connected" if result else "disconnected"
+            except:
+                db_status = f"error: {error_msg[:100]}"
+        else:
+            db_status = f"error: {error_msg[:100]}"
     
     return {
         "status": "healthy",
