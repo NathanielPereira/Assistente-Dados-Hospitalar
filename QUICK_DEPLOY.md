@@ -21,8 +21,11 @@ O código já foi publicado! Repositório: `NathanielPereira/Assistente-Dados-Ho
    Branch: main
    Root Directory: apps/backend-fastapi
    Runtime: Python 3
-   Build Command: cd apps/backend-fastapi && pip install poetry && poetry install --without dev
+   Build Command: pip install poetry && poetry install --without dev
    Start Command: poetry run uvicorn src.api.main:app --host 0.0.0.0 --port $PORT
+   
+   ⚠️ IMPORTANTE: Se você configurou "Root Directory: apps/backend-fastapi", 
+   NÃO inclua "cd apps/backend-fastapi" no Build Command!
    ```
 6. **Environment Variables**:
    ```
