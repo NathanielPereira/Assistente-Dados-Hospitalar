@@ -41,7 +41,7 @@ Este guia mostra como fazer deploy **100% gratuito** usando:
    - **Runtime**: `Python 3`
    - **Build Command**: 
      ```bash
-     pip install poetry && poetry install --no-dev
+     cd apps/backend-fastapi && pip install poetry && poetry install --without dev
      ```
    - **Start Command**: 
      ```bash
