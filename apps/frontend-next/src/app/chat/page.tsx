@@ -10,14 +10,20 @@ export default function ChatPage() {
   useEffect(() => {
     // Verifica se backend está online
     fetch('/api/health')
-      .then((res) => {
-        if (res.ok) {
+      .then(async (res) => {
+        const data = await res.json()
+        console.log('[chat] Backend status:', data)
+        if (res.ok && data.status === 'online') {
           setBackendStatus('online')
         } else {
+          console.error('[chat] Backend offline:', data)
           setBackendStatus('offline')
         }
       })
-      .catch(() => setBackendStatus('offline'))
+      .catch((err) => {
+        console.error('[chat] Erro ao verificar backend:', err)
+        setBackendStatus('offline')
+      })
   }, [])
 
   return (
@@ -32,12 +38,17 @@ export default function ChatPage() {
 
       {backendStatus === 'offline' && (
         <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-          <p className="text-yellow-800 font-semibold">⚠️ Backend não está rodando</p>
-          <p className="text-yellow-700 text-sm mt-1">
-            Para usar o chat, inicie o backend: 
-            <code className="bg-yellow-100 px-2 py-1 rounded ml-2">
-              cd apps\backend-fastapi && poetry run uvicorn src.api.main:app --reload
-            </code>
+          <p className="text-yellow-800 font-semibold">⚠️ Backend não está acessível</p>
+          <p className="text-yellow-700 text-sm mt-2">
+            Verifique se:
+          </p>
+          <ul className="text-yellow-700 text-sm mt-1 list-disc list-inside space-y-1">
+            <li>A variável <code className="bg-yellow-100 px-1 rounded">NEXT_PUBLIC_API_URL</code> está configurada no Vercel</li>
+            <li>O backend está rodando em: <code className="bg-yellow-100 px-1 rounded">https://assistente-dados-hospitalar.onrender.com</code></li>
+            <li>O Render não está "dormindo" (configure UptimeRobot para manter ativo)</li>
+          </ul>
+          <p className="text-yellow-700 text-sm mt-2">
+            Teste direto: <a href="https://assistente-dados-hospitalar.onrender.com/health" target="_blank" rel="noopener noreferrer" className="underline">https://assistente-dados-hospitalar.onrender.com/health</a>
           </p>
         </div>
       )}
