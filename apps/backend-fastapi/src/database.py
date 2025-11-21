@@ -57,12 +57,14 @@ class Database:
         """Executa query e retorna resultados como lista de dicionários."""
         async with self.get_connection() as conn:
             # Usa autocommit para evitar idle-in-transaction timeout
+            # psycopg3 faz commit automático quando o cursor fecha, mas garantimos com transaction
             async with conn.transaction():
                 async with conn.cursor() as cur:
                     await cur.execute(query, params)
                     if cur.description:
                         columns = [desc[0] for desc in cur.description]
                         rows = await cur.fetchall()
+                        # Transaction faz commit automático ao sair do context
                         return [dict(zip(columns, row)) for row in rows]
                     return []
 
