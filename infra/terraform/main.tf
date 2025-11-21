@@ -345,6 +345,14 @@ resource "aws_ecs_service" "frontend" {
     security_groups  = [aws_security_group.frontend.id]
     assign_public_ip = true
   }
+
+  load_balancer {
+    target_group_arn = aws_lb_target_group.frontend.arn
+    container_name   = "frontend"
+    container_port   = 3000
+  }
+
+  depends_on = [aws_lb_listener.frontend]
 }
 
 # Outputs
@@ -353,7 +361,51 @@ output "backend_url" {
 }
 
 output "frontend_url" {
-  value = "http://${aws_ecs_service.frontend.load_balancer[0].target_group_arn}"
+  value = "http://${aws_lb.frontend.dns_name}"
+}
+
+# ALB para Frontend
+resource "aws_lb" "frontend" {
+  name               = "hospital-assistant-frontend-alb"
+  internal           = false
+  load_balancer_type = "application"
+  security_groups    = [aws_security_group.frontend.id]
+  subnets            = aws_subnet.public[*].id
+
+  enable_deletion_protection = false
+
+  tags = {
+    Name = "hospital-assistant-frontend-alb"
+  }
+}
+
+resource "aws_lb_target_group" "frontend" {
+  name        = "hospital-assistant-frontend-tg"
+  port        = 3000
+  protocol    = "HTTP"
+  vpc_id      = aws_vpc.main.id
+  target_type = "ip"
+
+  health_check {
+    enabled             = true
+    healthy_threshold   = 2
+    unhealthy_threshold = 2
+    timeout             = 5
+    interval            = 30
+    path                = "/"
+    matcher             = "200"
+  }
+}
+
+resource "aws_lb_listener" "frontend" {
+  load_balancer_arn = aws_lb.frontend.arn
+  port              = "80"
+  protocol          = "HTTP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.frontend.arn
+  }
 }
 
 data "aws_caller_identity" "current" {}
