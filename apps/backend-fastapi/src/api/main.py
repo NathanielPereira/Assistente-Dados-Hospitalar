@@ -52,6 +52,7 @@ app.add_middleware(
         "http://localhost:3001",
         "https://*.vercel.app",  # Vercel deployments
         "https://assistente-dados-hospitalar.vercel.app",  # Seu domínio específico
+        "https://assistente-dados-hospitalar-*.vercel.app",  # Preview deployments
     ],
     allow_credentials=True,
     allow_methods=["*"],
