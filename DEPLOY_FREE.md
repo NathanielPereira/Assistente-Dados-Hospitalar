@@ -37,12 +37,13 @@ Este guia mostra como fazer deploy **100% gratuito** usando:
    - **Name**: `hospital-assistant-backend`
    - **Region**: Escolha mais próxima (ex: `Oregon (US West)`)
    - **Branch**: `main`
-   - **Root Directory**: `apps/backend-fastapi`
+   - **Root Directory**: `apps/backend-fastapi` ⚠️ **IMPORTANTE**: Configure isso primeiro!
    - **Runtime**: `Python 3`
    - **Build Command**: 
      ```bash
-     cd apps/backend-fastapi && pip install poetry && poetry install --without dev
+     pip install poetry && poetry install --without dev
      ```
+     ⚠️ **NÃO inclua `cd apps/backend-fastapi`** - o Root Directory já faz isso!
    - **Start Command**: 
      ```bash
      poetry run uvicorn src.api.main:app --host 0.0.0.0 --port $PORT

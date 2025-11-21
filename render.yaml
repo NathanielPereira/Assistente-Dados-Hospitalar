@@ -2,13 +2,9 @@ services:
   - type: web
     name: hospital-assistant-backend
     env: python
-    buildCommand: |
-      cd apps/backend-fastapi
-      pip install poetry
-      poetry install --without dev
-    startCommand: |
-      cd apps/backend-fastapi
-      poetry run uvicorn src.api.main:app --host 0.0.0.0 --port $PORT
+    rootDir: apps/backend-fastapi
+    buildCommand: pip install poetry && poetry install --without dev
+    startCommand: poetry run uvicorn src.api.main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: DATABASE_URL
         sync: false
