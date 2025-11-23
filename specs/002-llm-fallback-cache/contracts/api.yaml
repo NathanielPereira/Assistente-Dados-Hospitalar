@@ -1,0 +1,367 @@
+openapi: 3.0.3
+info:
+  title: LLM Fallback and Cache API
+  version: 1.0.0
+  description: |
+    APIs para gerenciamento de fallback de LLM e cache de respostas.
+    Extensão do sistema existente de chat.
+
+paths:
+  /v1/llm/providers:
+    get:
+      summary: Lista provedores de LLM configurados
+      tags:
+        - LLM Providers
+      responses:
+        '200':
+          description: Lista de provedores
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  providers:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/LLMProvider'
+                  active_provider:
+                    type: string
+                    description: ID do provedor ativo no momento
+    post:
+      summary: Adiciona novo provedor de LLM
+      tags:
+        - LLM Providers
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LLMProviderCreate'
+      responses:
+        '201':
+          description: Provedor criado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LLMProvider'
+        '400':
+          description: Dados inválidos
+
+  /v1/llm/providers/{provider_id}:
+    get:
+      summary: Obtém detalhes de um provedor
+      tags:
+        - LLM Providers
+      parameters:
+        - name: provider_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Detalhes do provedor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LLMProvider'
+        '404':
+          description: Provedor não encontrado
+    patch:
+      summary: Atualiza configuração de um provedor
+      tags:
+        - LLM Providers
+      parameters:
+        - name: provider_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LLMProviderUpdate'
+      responses:
+        '200':
+          description: Provedor atualizado
+        '404':
+          description: Provedor não encontrado
+
+  /v1/cache/entries:
+    get:
+      summary: Lista entradas do cache
+      tags:
+        - Cache
+      parameters:
+        - name: question
+          in: query
+          schema:
+            type: string
+          description: Busca por pergunta (correspondência parcial)
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+          description: Limite de resultados
+      responses:
+        '200':
+          description: Lista de entradas
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  entries:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CacheEntry'
+                  total:
+                    type: integer
+    post:
+      summary: Adiciona nova entrada ao cache (manual)
+      tags:
+        - Cache
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CacheEntryCreate'
+      responses:
+        '201':
+          description: Entrada criada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CacheEntry'
+        '400':
+          description: Dados inválidos ou validação falhou
+
+  /v1/cache/entries/{entry_id}:
+    get:
+      summary: Obtém detalhes de uma entrada
+      tags:
+        - Cache
+      parameters:
+        - name: entry_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Detalhes da entrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CacheEntry'
+        '404':
+          description: Entrada não encontrada
+    delete:
+      summary: Remove entrada do cache
+      tags:
+        - Cache
+      parameters:
+        - name: entry_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Entrada removida
+        '404':
+          description: Entrada não encontrada
+
+  /v1/cache/match:
+    post:
+      summary: Busca correspondência de pergunta no cache
+      tags:
+        - Cache
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                question:
+                  type: string
+                  description: Pergunta a ser buscada
+              required:
+                - question
+      responses:
+        '200':
+          description: Correspondência encontrada (ou não)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  matched:
+                    type: boolean
+                  entry:
+                    $ref: '#/components/schemas/CacheEntry'
+                    nullable: true
+                  confidence:
+                    type: number
+                    format: float
+                    description: Nível de confiança na correspondência (0.0 a 1.0)
+
+  /v1/cache/stats:
+    get:
+      summary: Estatísticas do cache
+      tags:
+        - Cache
+      responses:
+        '200':
+          description: Estatísticas
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total_entries:
+                    type: integer
+                  cache_hit_rate:
+                    type: number
+                    format: float
+                    description: Taxa de acerto (0.0 a 1.0)
+                  total_requests:
+                    type: integer
+                  cache_size_bytes:
+                    type: integer
+
+components:
+  schemas:
+    LLMProvider:
+      type: object
+      properties:
+        provider_id:
+          type: string
+        provider_type:
+          type: string
+          enum: [OPENAI, ANTHROPIC, GOOGLE, OLLAMA]
+        priority:
+          type: integer
+        enabled:
+          type: boolean
+        status:
+          type: string
+          enum: [AVAILABLE, UNAVAILABLE, RATE_LIMITED, ERROR]
+        last_health_check:
+          type: string
+          format: date-time
+        consecutive_failures:
+          type: integer
+        circuit_breaker_open:
+          type: boolean
+        circuit_breaker_opened_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    LLMProviderCreate:
+      type: object
+      required:
+        - provider_id
+        - provider_type
+        - priority
+      properties:
+        provider_id:
+          type: string
+        provider_type:
+          type: string
+          enum: [OPENAI, ANTHROPIC, GOOGLE, OLLAMA]
+        api_key:
+          type: string
+          description: Chave de API (criptografada)
+        api_url:
+          type: string
+          description: URL base (para Ollama)
+        priority:
+          type: integer
+        enabled:
+          type: boolean
+          default: true
+
+    LLMProviderUpdate:
+      type: object
+      properties:
+        priority:
+          type: integer
+        enabled:
+          type: boolean
+        api_key:
+          type: string
+
+    CacheEntry:
+      type: object
+      properties:
+        entry_id:
+          type: string
+          format: uuid
+        question:
+          type: string
+        variations:
+          type: array
+          items:
+            type: string
+        keywords:
+          type: array
+          items:
+            type: string
+        sql:
+          type: string
+        response_template:
+          type: string
+        requires_realtime:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        last_used:
+          type: string
+          format: date-time
+          nullable: true
+        usage_count:
+          type: integer
+        confidence:
+          type: number
+          format: float
+        validated:
+          type: boolean
+        provider_used:
+          type: string
+          nullable: true
+
+    CacheEntryCreate:
+      type: object
+      required:
+        - question
+        - sql
+        - response_template
+      properties:
+        question:
+          type: string
+        variations:
+          type: array
+          items:
+            type: string
+        keywords:
+          type: array
+          items:
+            type: string
+        sql:
+          type: string
+        response_template:
+          type: string
+        requires_realtime:
+          type: boolean
+          default: false
+
