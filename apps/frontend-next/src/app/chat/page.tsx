@@ -27,40 +27,40 @@ export default function ChatPage() {
   }, [])
 
   return (
-    <div className="container mx-auto p-6 max-w-4xl">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">💬 Consulta Clínica Unificada</h1>
-        <p className="text-gray-600">
+    <div className="container mx-auto p-4 sm:p-6 max-w-4xl">
+      <div className="mb-4 sm:mb-6">
+        <h1 className="text-2xl sm:text-3xl font-bold mb-2">💬 Consulta Clínica Unificada</h1>
+        <p className="text-sm sm:text-base text-gray-600">
           Faça perguntas em português sobre dados hospitalares. O sistema combina informações 
           do banco de dados (via SQL) com documentos e protocolos (via RAG) para dar respostas completas.
         </p>
       </div>
 
       {backendStatus === 'offline' && (
-        <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-          <p className="text-yellow-800 font-semibold">⚠️ Backend não está acessível</p>
-          <p className="text-yellow-700 text-sm mt-2">
+        <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <p className="text-yellow-800 font-semibold text-sm sm:text-base">⚠️ Backend não está acessível</p>
+          <p className="text-yellow-700 text-xs sm:text-sm mt-2">
             Verifique se:
           </p>
-          <ul className="text-yellow-700 text-sm mt-1 list-disc list-inside space-y-1">
+          <ul className="text-yellow-700 text-xs sm:text-sm mt-1 list-disc list-inside space-y-1">
             <li>A variável <code className="bg-yellow-100 px-1 rounded">NEXT_PUBLIC_API_URL</code> está configurada no Vercel</li>
-            <li>O backend está rodando em: <code className="bg-yellow-100 px-1 rounded">https://assistente-dados-hospitalar.onrender.com</code></li>
-            <li>O Render não está "dormindo" (configure UptimeRobot para manter ativo)</li>
+            <li>O backend está rodando em: <code className="bg-yellow-100 px-1 rounded break-all">https://assistente-dados-hospitalar.onrender.com</code></li>
+            <li>O Render não está &quot;dormindo&quot; (configure UptimeRobot para manter ativo)</li>
           </ul>
-          <p className="text-yellow-700 text-sm mt-2">
+          <p className="text-yellow-700 text-xs sm:text-sm mt-2 break-all">
             Teste direto: <a href="https://assistente-dados-hospitalar.onrender.com/health" target="_blank" rel="noopener noreferrer" className="underline">https://assistente-dados-hospitalar.onrender.com/health</a>
           </p>
         </div>
       )}
 
-      <div className="bg-white rounded-lg shadow-md p-6">
+      <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
         <ChatStream sessionId={sessionId} />
       </div>
 
-      <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-        <h3 className="font-semibold mb-2">💡 Como funciona:</h3>
-        <ul className="list-disc list-inside text-sm text-gray-700 space-y-1">
-          <li>Digite sua pergunta em português (ex: "Qual a taxa de ocupação da UTI?")</li>
+      <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-blue-50 rounded-lg">
+        <h3 className="font-semibold mb-2 text-sm sm:text-base">💡 Como funciona:</h3>
+        <ul className="list-disc list-inside text-xs sm:text-sm text-gray-700 space-y-1">
+          <li>Digite sua pergunta em português (ex: &quot;Qual a taxa de ocupação da UTI?&quot;)</li>
           <li>O sistema busca dados no banco e documentos relevantes</li>
           <li>Você recebe resposta em tempo real com streaming</li>
           <li>SQL executado e documentos citados ficam visíveis para auditoria</li>

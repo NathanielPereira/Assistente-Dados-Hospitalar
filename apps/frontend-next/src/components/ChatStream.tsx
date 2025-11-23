@@ -181,14 +181,14 @@ export default function ChatStream({ sessionId }: ChatStreamProps) {
 
   return (
     <div data-testid="chat-container" className="space-y-4">
-      <div className="flex gap-2">
+      <div className="flex flex-col sm:flex-row gap-2">
       <input
         data-testid="chat-input"
           type="text"
         value={message}
         onChange={(e) => setMessage(e.target.value)}
           placeholder="Ex: Qual a taxa de ocupação da UTI pediátrica?"
-          className="flex-1 p-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="flex-1 p-3 text-sm sm:text-base border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           onKeyPress={(e) => e.key === 'Enter' && !loading && handleSend()}
           disabled={loading}
       />
@@ -196,7 +196,7 @@ export default function ChatStream({ sessionId }: ChatStreamProps) {
           data-testid="send-button" 
           onClick={handleSend}
           disabled={loading || !message.trim()}
-          className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition font-semibold"
+          className="px-4 sm:px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition font-semibold text-sm sm:text-base whitespace-nowrap"
         >
           {loading ? 'Enviando...' : 'Enviar'}
         </button>
@@ -205,19 +205,19 @@ export default function ChatStream({ sessionId }: ChatStreamProps) {
       {(response || summary) && (
         <div className="space-y-4">
           {summary && summary.tipo === 'uti_ocupacao' && (
-            <div className="p-4 bg-white rounded-lg border border-blue-200 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="p-4 sm:p-6 bg-white rounded-lg border border-blue-200 shadow-sm flex flex-col gap-4">
               <div>
-                <p className="text-sm text-gray-500 uppercase tracking-wide">
+                <p className="text-xs sm:text-sm text-gray-500 uppercase tracking-wide">
                   Taxa de ocupação - {summary.setor || 'UTI Pediátrica'}
                 </p>
-                <p className="mt-1 text-3xl font-bold text-blue-700">
+                <p className="mt-1 text-2xl sm:text-3xl font-bold text-blue-700">
                   {summary.taxa ? Number(summary.taxa).toFixed(2) : '0.00'}%
                 </p>
-                <p className="mt-1 text-sm text-gray-600">
+                <p className="mt-1 text-xs sm:text-sm text-gray-600">
                   {summary.ocupados || 0} de {summary.total || 0} leitos ocupados
                 </p>
               </div>
-              <div className="text-sm text-gray-500">
+              <div className="text-xs sm:text-sm text-gray-500 border-t pt-3 sm:border-t-0 sm:pt-0">
                 <p>Faixa segura recomendada: até 80%</p>
                 {summary.taxa !== undefined && summary.taxa > 80 && (
                   <p className="mt-1 text-red-600 font-semibold">
@@ -229,84 +229,84 @@ export default function ChatStream({ sessionId }: ChatStreamProps) {
           )}
 
           {summary && summary.tipo === 'leitos_disponiveis' && (
-            <div className="p-4 bg-white rounded-lg border border-blue-200 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="p-4 sm:p-6 bg-white rounded-lg border border-blue-200 shadow-sm flex flex-col gap-4">
               <div>
-                <p className="text-sm text-gray-500 uppercase tracking-wide">
+                <p className="text-xs sm:text-sm text-gray-500 uppercase tracking-wide">
                   Leitos disponíveis - {summary.setor || 'Setor consultado'}
                 </p>
-                <p className="mt-1 text-3xl font-bold text-blue-700">
+                <p className="mt-1 text-2xl sm:text-3xl font-bold text-blue-700">
                   {summary.disponiveis}
                 </p>
-                <p className="mt-1 text-sm text-gray-600">
+                <p className="mt-1 text-xs sm:text-sm text-gray-600">
                   Leitos marcados como &quot;disponíveis&quot; no banco de dados
                 </p>
               </div>
-              <div className="text-sm text-gray-500">
+              <div className="text-xs sm:text-sm text-gray-500 border-t pt-3 sm:border-t-0 sm:pt-0">
                 <p>Baseado nos dados simulados de leitos.</p>
               </div>
             </div>
           )}
 
           {summary && summary.tipo === 'contagem' && (
-            <div className="p-4 bg-white rounded-lg border border-blue-200 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="p-4 sm:p-6 bg-white rounded-lg border border-blue-200 shadow-sm flex flex-col gap-4">
               <div>
-                <p className="text-sm text-gray-500 uppercase tracking-wide">
+                <p className="text-xs sm:text-sm text-gray-500 uppercase tracking-wide">
                   {summary.label || 'Total'}
                 </p>
-                <p className="mt-1 text-3xl font-bold text-blue-700">
+                <p className="mt-1 text-2xl sm:text-3xl font-bold text-blue-700">
                   {summary.valor}
                 </p>
-                <p className="mt-1 text-sm text-gray-600">
+                <p className="mt-1 text-xs sm:text-sm text-gray-600">
                   Contagem agregada com base nos dados atuais do banco.
                 </p>
               </div>
-              <div className="text-sm text-gray-500">
+              <div className="text-xs sm:text-sm text-gray-500 border-t pt-3 sm:border-t-0 sm:pt-0">
                 <p>Uso típico: visão rápida de volumes (ex.: procedimentos, atendimentos).</p>
               </div>
             </div>
           )}
 
           {summary && summary.tipo === 'media' && (
-            <div className="p-4 bg-white rounded-lg border border-blue-200 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="p-4 sm:p-6 bg-white rounded-lg border border-blue-200 shadow-sm flex flex-col gap-4">
               <div>
-                <p className="text-sm text-gray-500 uppercase tracking-wide">
+                <p className="text-xs sm:text-sm text-gray-500 uppercase tracking-wide">
                   {summary.label || 'Média'}
                 </p>
-                <p className="mt-1 text-3xl font-bold text-blue-700">
+                <p className="mt-1 text-xl sm:text-2xl md:text-3xl font-bold text-blue-700 break-words">
                   {summary.formato === 'currency' 
                     ? `R$ ${Number(summary.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                     : summary.valor}
                 </p>
-                <p className="mt-1 text-sm text-gray-600">
+                <p className="mt-1 text-xs sm:text-sm text-gray-600">
                   {summary.formato === 'currency' 
                     ? 'Valor médio calculado com base nos dados atuais do banco.'
                     : 'Média calculada com base nos dados atuais do banco.'}
                 </p>
               </div>
-              <div className="text-sm text-gray-500">
+              <div className="text-xs sm:text-sm text-gray-500 border-t pt-3 sm:border-t-0 sm:pt-0">
                 <p>Baseado em agregação dos dados disponíveis.</p>
               </div>
             </div>
           )}
 
           {summary && summary.tipo === 'soma' && (
-            <div className="p-4 bg-white rounded-lg border border-blue-200 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="p-4 sm:p-6 bg-white rounded-lg border border-blue-200 shadow-sm flex flex-col gap-4">
               <div>
-                <p className="text-sm text-gray-500 uppercase tracking-wide">
+                <p className="text-xs sm:text-sm text-gray-500 uppercase tracking-wide">
                   {summary.label || 'Total'}
                 </p>
-                <p className="mt-1 text-3xl font-bold text-blue-700">
+                <p className="mt-1 text-xl sm:text-2xl md:text-3xl font-bold text-blue-700 break-words">
                   {summary.formato === 'currency' 
                     ? `R$ ${Number(summary.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                     : summary.valor}
                 </p>
-                <p className="mt-1 text-sm text-gray-600">
+                <p className="mt-1 text-xs sm:text-sm text-gray-600">
                   {summary.formato === 'currency' 
                     ? 'Soma total calculada com base nos dados atuais do banco.'
                     : 'Total calculado com base nos dados atuais do banco.'}
                 </p>
               </div>
-              <div className="text-sm text-gray-500">
+              <div className="text-xs sm:text-sm text-gray-500 border-t pt-3 sm:border-t-0 sm:pt-0">
                 <p>Baseado em agregação dos dados disponíveis.</p>
               </div>
             </div>
@@ -317,10 +317,10 @@ export default function ChatStream({ sessionId }: ChatStreamProps) {
             <>
               <div
                 data-testid="streaming-response"
-                className="p-4 bg-blue-50 rounded-lg border border-blue-200"
+                className="p-4 sm:p-6 bg-blue-50 rounded-lg border border-blue-200"
               >
-                <h3 className="font-semibold mb-2 text-blue-900">💬 Resposta:</h3>
-                <div className="prose prose-sm max-w-none text-gray-800 whitespace-pre-wrap">
+                <h3 className="font-semibold mb-2 text-blue-900 text-sm sm:text-base">💬 Resposta:</h3>
+                <div className="prose prose-sm max-w-none text-gray-800 whitespace-pre-wrap text-xs sm:text-sm">
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>
                     {response}
                   </ReactMarkdown>
@@ -330,12 +330,12 @@ export default function ChatStream({ sessionId }: ChatStreamProps) {
               {sqlExecuted && (
                 <div
                   data-testid="sql-executed"
-                  className="p-4 bg-green-50 rounded-lg border border-green-200"
+                  className="p-4 sm:p-6 bg-green-50 rounded-lg border border-green-200"
                 >
-                  <h3 className="font-semibold mb-2 text-green-900">
+                  <h3 className="font-semibold mb-2 text-green-900 text-sm sm:text-base">
                     📊 SQL Executado:
                   </h3>
-                  <pre className="bg-white p-3 rounded text-sm font-mono overflow-x-auto">
+                  <pre className="bg-white p-3 rounded text-xs sm:text-sm font-mono overflow-x-auto">
                     {sqlExecuted}
                   </pre>
                 </div>
@@ -344,12 +344,12 @@ export default function ChatStream({ sessionId }: ChatStreamProps) {
               {documents.length > 0 && (
                 <div
                   data-testid="document-citations"
-                  className="p-4 bg-yellow-50 rounded-lg border border-yellow-200"
+                  className="p-4 sm:p-6 bg-yellow-50 rounded-lg border border-yellow-200"
                 >
-                  <h3 className="font-semibold mb-2 text-yellow-900">
+                  <h3 className="font-semibold mb-2 text-yellow-900 text-sm sm:text-base">
                     📄 Documentos Citados:
                   </h3>
-                  <ul className="list-disc list-inside space-y-1">
+                  <ul className="list-disc list-inside space-y-1 text-xs sm:text-sm">
                     {documents.map((doc, idx) => (
                       <li key={idx} className="text-gray-700">
                         {doc}
@@ -364,10 +364,10 @@ export default function ChatStream({ sessionId }: ChatStreamProps) {
       )}
 
       {!response && !summary && !loading && (
-        <div className="text-center py-8 text-gray-500">
-          <p>💡 Digite sua pergunta acima para começar</p>
-          <p className="text-sm mt-2">Exemplos:</p>
-          <ul className="text-sm mt-2 space-y-1">
+        <div className="text-center py-6 sm:py-8 text-gray-500 px-2">
+          <p className="text-sm sm:text-base">💡 Digite sua pergunta acima para começar</p>
+          <p className="text-xs sm:text-sm mt-2">Exemplos:</p>
+          <ul className="text-xs sm:text-sm mt-2 space-y-1">
             <li>"Qual a taxa de ocupação da UTI pediátrica?"</li>
             <li>"Quantos leitos estão disponíveis no setor X?"</li>
             <li>"Qual protocolo aplicar para isolamento?"</li>
