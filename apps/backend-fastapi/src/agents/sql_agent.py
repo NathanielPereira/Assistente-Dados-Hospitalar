@@ -216,22 +216,21 @@ class SQLAgentService:
                 # Captura SQL executado durante o processo
                 executed_sql = None
                 
-                # Usa astream_events para capturar os passos intermediários
-                try:
-                    async for event in self.sql_agent.astream_events({"input": enhanced_prompt}, version="v2"):
-                        # Captura quando o SQL é executado (tool call)
-                        if event.get("event") == "on_tool_start":
-                            tool_input = event.get("data", {}).get("input", {})
-                            if isinstance(tool_input, dict):
-                                query = tool_input.get("query") or tool_input.get("sql")
-                                if query and "SELECT" in query.upper():
-                                    executed_sql = query
-                                    print(f"[sql_agent] SQL capturado durante execução: {executed_sql[:200]}...")
-                except Exception as stream_error:
-                    print(f"[sql_agent] Aviso: Não foi possível capturar SQL via stream: {stream_error}")
+                # Invoca o SQLAgent do LangChain com timeout de 4 segundos
+                import asyncio
+                from src.config import settings
+                timeout_seconds = settings.LLM_REQUEST_TIMEOUT
                 
-                # Invoca o SQLAgent do LangChain
-                result = await self.sql_agent.ainvoke({"input": enhanced_prompt})
+                # Captura SQL executado durante o processo (opcional)
+                executed_sql = None
+                
+                try:
+                    result = await asyncio.wait_for(
+                        self.sql_agent.ainvoke({"input": enhanced_prompt}),
+                        timeout=timeout_seconds
+                    )
+                except asyncio.TimeoutError:
+                    raise TimeoutError(f"Timeout de {timeout_seconds}s ao gerar SQL com {self.llm.__class__.__name__}")
                 
                 # O resultado do SQLAgent pode vir em diferentes formatos
                 # Tenta extrair o SQL de várias formas
@@ -293,9 +292,61 @@ class SQLAgentService:
                     # Fallback mínimo apenas se LangChain não retornou SQL válido
                     return self._generate_minimal_fallback(prompt)
                     
+            except asyncio.TimeoutError as e:
+                logger.warning(f"[sql_agent] ⏱️ Timeout ao gerar SQL: {e}")
+                print(f"[sql_agent] ⏱️ Timeout ao gerar SQL: {e}")
+                # Marca o provedor como indisponível e tenta fallback
+                if self.llm:
+                    try:
+                        from src.services.llm_service import LLMService
+                        for provider_id, llm_instance in LLMService._llm_instances.items():
+                            if llm_instance == self.llm:
+                                LLMService._handle_provider_error(provider_id, e)
+                                break
+                    except:
+                        pass
+                # Tenta fallback para outro provedor
+                try:
+                    from src.services.llm_service import LLMService
+                    failed_provider_id = None
+                    for provider_id, llm_instance in LLMService._llm_instances.items():
+                        if llm_instance == self.llm:
+                            failed_provider_id = provider_id
+                            break
+                    if failed_provider_id:
+                        logger.info(f"[sql_agent] 🔄 Tentando fallback após timeout de {failed_provider_id}...")
+                        new_llm = LLMService.get_llm_with_fallback(failed_provider_id=failed_provider_id)
+                        if new_llm and new_llm != self.llm:
+                            self.llm = new_llm
+                            self._initialize_agent()
+                            # Tenta novamente com timeout
+                            try:
+                                enhanced_prompt = self._enhance_prompt(prompt)
+                                result = await asyncio.wait_for(
+                                    self.sql_agent.ainvoke({"input": enhanced_prompt}),
+                                    timeout=timeout_seconds
+                                )
+                                sql_clean = self._extract_sql_from_response(str(result))
+                                if sql_clean and "SELECT" in sql_clean.upper():
+                                    logger.info(f"[sql_agent] ✅ SQL gerado com sucesso usando provedor de fallback após timeout")
+                                    return SQLSuggestion(
+                                        sql=sql_clean,
+                                        comments=f"SQL gerado pelo LangChain SQLAgent (fallback após timeout) baseado no contexto do banco",
+                                        estimated_rows=None
+                                    )
+                            except Exception as retry_error:
+                                logger.warning(f"[sql_agent] ⚠️ Fallback também falhou após timeout: {retry_error}")
+                except Exception as fallback_error:
+                    logger.error(f"[sql_agent] ❌ Erro ao tentar fallback após timeout: {fallback_error}")
+                # Se fallback falhou, usa fallback mínimo
+                fallback_result = self._generate_minimal_fallback(prompt)
+                logger.info(f"[sql_agent] ✅ Usando fallback mínimo após timeout")
+                return fallback_result
+                
             except Exception as e:
                 error_str = str(e).lower()
                 is_rate_limit = "429" in error_str or "rate limit" in error_str or "quota" in error_str or "insufficient_quota" in error_str
+                is_timeout = "timeout" in error_str
                 
                 logger.error(f"[sql_agent] ERRO ao gerar SQL com LangChain: {e}")
                 print(f"[sql_agent] ERRO ao gerar SQL com LangChain: {e}")

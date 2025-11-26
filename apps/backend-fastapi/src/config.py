@@ -31,6 +31,10 @@ class Settings:
     # Prioridade padrão: Google primeiro (gratuito), depois OpenAI, HuggingFace, OpenRouter
     LLM_PROVIDER_PRIORITY: str = os.getenv("LLM_PROVIDER_PRIORITY", "google,openai,openrouter,huggingface")
     LLM_ROTATION_STRATEGY: str = os.getenv("LLM_ROTATION_STRATEGY", "priority")
+    
+    # LLM Timeout Configuration (em segundos)
+    LLM_REQUEST_TIMEOUT: int = int(os.getenv("LLM_REQUEST_TIMEOUT", "4"))  # 4 segundos por modelo
+    LLM_MAX_RETRIES: int = int(os.getenv("LLM_MAX_RETRIES", "1"))  # Máximo 1 retry por modelo
 
     # S3
     AWS_ACCESS_KEY_ID: Optional[str] = os.getenv("AWS_ACCESS_KEY_ID")

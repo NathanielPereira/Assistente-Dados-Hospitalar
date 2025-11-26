@@ -211,9 +211,13 @@ class LLMService:
 
     @classmethod
     def _create_llm_instance(cls, provider: LLMProvider) -> Optional[BaseLanguageModel]:
-        """Cria instância LangChain para o provedor especificado."""
+        """Cria instância LangChain para o provedor especificado com timeout configurado."""
         if not LANGCHAIN_AVAILABLE:
             return None
+        
+        # Timeout padrão de 4 segundos por requisição
+        timeout_seconds = settings.LLM_REQUEST_TIMEOUT
+        max_retries = settings.LLM_MAX_RETRIES
             
         try:
             if provider.provider_type == ProviderType.GOOGLE and ChatGoogleGenerativeAI:
@@ -221,12 +225,16 @@ class LLMService:
                     model="gemini-1.5-flash",  # Atualizado: gemini-pro foi deprecado
                     temperature=0,
                     google_api_key=provider.api_key,
+                    timeout=timeout_seconds,
+                    max_retries=max_retries,
                 )
             elif provider.provider_type == ProviderType.ANTHROPIC and ChatAnthropic:
                 return ChatAnthropic(
                     model="claude-3-haiku-20240307",
                     temperature=0,
                     anthropic_api_key=provider.api_key,
+                    timeout=timeout_seconds,
+                    max_retries=max_retries,
                 )
             elif provider.provider_type == ProviderType.HUGGINGFACE:
                 # OPÇÃO 1: Usar ChatHuggingFace (suporta tool calling em modelos compatíveis)
@@ -245,6 +253,7 @@ class LLMService:
                         huggingfacehub_api_token=provider.api_key,
                         max_new_tokens=512,
                         temperature=0.1,
+                        timeout=timeout_seconds,
                     )
                     
                     # Wrapper ChatHuggingFace adiciona suporte a tool calling
@@ -263,12 +272,16 @@ class LLMService:
                     temperature=0,
                     openai_api_key=provider.api_key,
                     openai_api_base="https://openrouter.ai/api/v1",
+                    timeout=timeout_seconds,
+                    max_retries=max_retries,
                 )
             elif provider.provider_type == ProviderType.OPENAI and ChatOpenAI:
                 return ChatOpenAI(
                     model="gpt-3.5-turbo",
                     temperature=0,
                     openai_api_key=provider.api_key,
+                    timeout=timeout_seconds,
+                    max_retries=max_retries,
                 )
         except Exception as e:
             logger.warning(f"Erro ao criar instância LLM para {provider.provider_id}: {e}")
