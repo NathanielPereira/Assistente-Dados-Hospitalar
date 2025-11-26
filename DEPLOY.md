@@ -30,31 +30,51 @@ git push origin main
 
 #### Backend (Render)
 
+⚠️ **IMPORTANTE**: Configure as variáveis de ambiente no painel do Render (Environment → Environment Variables), **não** no arquivo `.env` do código.
+
 No painel do Render, configure as seguintes variáveis de ambiente:
 
 ```env
-# Banco de Dados
+# Banco de Dados (OBRIGATÓRIO)
 DATABASE_URL=postgresql://user:password@host/database
 
-# LLM Providers
-OPENAI_API_KEY=sk-...
-GOOGLE_API_KEY=...
-ANTHROPIC_API_KEY=...
-OPENROUTER_API_KEY=...
+# Provedores LLM (Configure pelo menos 2 para fallback automático)
+# Google Gemini (Recomendado - gratuito): https://makersuite.google.com/app/apikey
+GOOGLE_API_KEY=sua-chave-google
+
+# OpenAI (Opcional): https://platform.openai.com/api-keys
+OPENAI_API_KEY=sk-sua-chave-openai
+
+# OpenRouter (Opcional): https://openrouter.ai/keys
+OPENROUTER_API_KEY=sk-or-sua-chave-openrouter
+
+# Hugging Face (Opcional): https://huggingface.co/settings/tokens
+HUGGINGFACE_API_KEY=hf_sua-chave-huggingface
+
+# Anthropic Claude (Opcional): https://console.anthropic.com/
+ANTHROPIC_API_KEY=sk-ant-sua-chave-anthropic
 
 # Configuração
 ENVIRONMENT=production
-LOG_LEVEL=info
+
+# Prioridade dos Provedores (ordem de tentativa)
+LLM_PROVIDER_PRIORITY=google,openai,openrouter,huggingface
+
+# Estratégia de Rotação
+LLM_ROTATION_STRATEGY=priority
 
 # Smart Detection
 ENABLE_SMART_DETECTION=true
 CONFIDENCE_THRESHOLD=0.70
 SIMILARITY_THRESHOLD=0.70
 SCHEMA_CACHE_TTL_SECONDS=3600
-
-# LLM Provider Priority (separado por vírgula)
-LLM_PROVIDER_PRIORITY=openai,google,anthropic,openrouter
 ```
+
+📖 **Documentação completa**: Veja `apps/backend-fastapi/ENV_VARIABLES.md` para detalhes sobre cada variável.
+
+✅ **Verificação**: Após o deploy, verifique os logs. Você deve ver:
+- `[OK] LLM inicializado (X/X provedores disponíveis)` - onde X é o número de provedores configurados
+- Se aparecer `⚠️ Apenas 1 provedor LLM configurado`, adicione mais API keys no Render
 
 #### Frontend (Vercel)
 
@@ -223,4 +243,6 @@ Ambos Vercel e Render fazem deploy automático a cada push para a branch `main`:
 ---
 
 **Última atualização**: 2024-11-26
+
+
 

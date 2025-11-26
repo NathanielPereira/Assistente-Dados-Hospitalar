@@ -81,11 +81,17 @@ class LLMService:
         priority_list = [p.strip().lower() for p in priority_list]
 
         priority = 1
+        missing_keys = []
+        
         for provider_name in priority_list:
             provider_id = provider_name.lower()
 
             # Google Gemini
-            if provider_id == "google" and settings.GOOGLE_API_KEY:
+            if provider_id == "google":
+                if not settings.GOOGLE_API_KEY:
+                    missing_keys.append("GOOGLE_API_KEY")
+                    logger.warning("⚠️ Google Gemini não configurado: GOOGLE_API_KEY não encontrada")
+                    continue
                 provider = LLMProvider(
                     provider_id="google",
                     provider_type=ProviderType.GOOGLE,
@@ -103,7 +109,11 @@ class LLMService:
                 priority += 1
 
             # Anthropic Claude
-            elif provider_id == "anthropic" and settings.ANTHROPIC_API_KEY:
+            elif provider_id == "anthropic":
+                if not settings.ANTHROPIC_API_KEY:
+                    missing_keys.append("ANTHROPIC_API_KEY")
+                    logger.warning("⚠️ Anthropic Claude não configurado: ANTHROPIC_API_KEY não encontrada")
+                    continue
                 provider = LLMProvider(
                     provider_id="anthropic",
                     provider_type=ProviderType.ANTHROPIC,
@@ -121,7 +131,11 @@ class LLMService:
                 priority += 1
 
             # Hugging Face
-            elif provider_id == "huggingface" and settings.HUGGINGFACE_API_KEY:
+            elif provider_id == "huggingface":
+                if not settings.HUGGINGFACE_API_KEY:
+                    missing_keys.append("HUGGINGFACE_API_KEY")
+                    logger.warning("⚠️ Hugging Face não configurado: HUGGINGFACE_API_KEY não encontrada")
+                    continue
                 provider = LLMProvider(
                     provider_id="huggingface",
                     provider_type=ProviderType.HUGGINGFACE,
@@ -139,7 +153,11 @@ class LLMService:
                 priority += 1
 
             # OpenRouter
-            elif provider_id == "openrouter" and settings.OPENROUTER_API_KEY:
+            elif provider_id == "openrouter":
+                if not settings.OPENROUTER_API_KEY:
+                    missing_keys.append("OPENROUTER_API_KEY")
+                    logger.warning("⚠️ OpenRouter não configurado: OPENROUTER_API_KEY não encontrada")
+                    continue
                 provider = LLMProvider(
                     provider_id="openrouter",
                     provider_type=ProviderType.OPENROUTER,
@@ -157,7 +175,11 @@ class LLMService:
                 priority += 1
 
             # OpenAI (fallback)
-            elif provider_id == "openai" and settings.OPENAI_API_KEY:
+            elif provider_id == "openai":
+                if not settings.OPENAI_API_KEY:
+                    missing_keys.append("OPENAI_API_KEY")
+                    logger.warning("⚠️ OpenAI não configurado: OPENAI_API_KEY não encontrada")
+                    continue
                 provider = LLMProvider(
                     provider_id="openai",
                     provider_type=ProviderType.OPENAI,
@@ -177,6 +199,15 @@ class LLMService:
         cls._initialized = True
         available_count = sum(1 for p in cls._providers.values() if p.is_available())
         logger.info(f"Inicializados {len(cls._providers)} provedores de LLM ({available_count} disponíveis)")
+        
+        if missing_keys:
+            logger.warning(f"⚠️ Provedores não configurados (faltam API keys): {', '.join(missing_keys)}")
+            logger.warning(f"💡 Configure as variáveis de ambiente no Render para habilitar fallback automático")
+        
+        if available_count == 0:
+            logger.error("❌ Nenhum provedor LLM disponível! Configure pelo menos uma API key.")
+        elif available_count == 1:
+            logger.warning("⚠️ Apenas 1 provedor LLM configurado. Configure mais provedores para fallback automático.")
 
     @classmethod
     def _create_llm_instance(cls, provider: LLMProvider) -> Optional[BaseLanguageModel]:
