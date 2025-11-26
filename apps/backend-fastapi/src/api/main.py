@@ -1,8 +1,9 @@
+import asyncio
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.api.routes import chat, sql, compliance
+from src.api.routes import chat, sql, compliance, llm, cache, schema
 from src.database import db
 from src.services.llm_service import LLMService
 
@@ -23,18 +24,56 @@ async def lifespan(app: FastAPI):
         print(f"[!] Erro ao testar conexao: {e}")
     
     # Inicializa LLM se disponível
-    llm = LLMService.get_llm()
-    if llm:
-        print("[OK] LLM inicializado")
-    else:
-        print("[!] LLM nao disponivel (OPENAI_API_KEY nao configurada)")
+    from src.services.llm_service import LANGCHAIN_AVAILABLE
+    
+    if not LANGCHAIN_AVAILABLE:
+        print("[!] LLM nao disponivel (bibliotecas LangChain nao estao instaladas)")
+        print("    Instale as dependencias: poetry install")
         print("    O sistema funcionara com SQL simples sem LangChain")
+    else:
+        # Primeiro verifica se há provedores configurados
+        LLMService._initialize_providers()
+        if LLMService._providers:
+            available_count = sum(1 for p in LLMService._providers.values() if p.is_available())
+            llm_instance = LLMService.get_llm()
+            if llm_instance:
+                print(f"[OK] LLM inicializado ({available_count}/{len(LLMService._providers)} provedores disponíveis)")
+                # Inicia health check periódico apenas se há provedores disponíveis
+                await LLMService.start_health_check()
+            else:
+                if available_count == 0:
+                    print(f"[!] LLM nao disponivel ({len(LLMService._providers)} provedores configurados mas nenhum disponível)")
+                    print("    Verifique se as chaves de API são válidas e as bibliotecas estão corretamente instaladas")
+                else:
+                    print(f"[!] LLM nao disponivel no momento ({available_count}/{len(LLMService._providers)} provedores disponíveis)")
+                print("    O sistema funcionara com SQL simples sem LangChain")
+                # Inicia health check mesmo assim para tentar recuperar (só se há provedores)
+                if LLMService._providers:
+                    await LLMService.start_health_check()
+        else:
+            print("[!] LLM nao disponivel (nenhum provedor configurado)")
+            print("    Configure pelo menos uma chave de API (OPENAI_API_KEY, GOOGLE_API_KEY, etc.)")
+            print("    O sistema funcionara com SQL simples sem LangChain")
     
-    yield
-    
-    # Shutdown
-    await db.disconnect()
-    print("[OK] Banco de dados desconectado")
+    try:
+        yield
+    except asyncio.CancelledError:
+        # CancelledError é esperado quando o servidor é interrompido
+        raise
+    finally:
+        # Shutdown: para health check e desconecta banco de dados
+        try:
+            await LLMService.stop_health_check()
+        except (asyncio.CancelledError, Exception):
+            # Ignora erros durante shutdown
+            pass
+        
+        try:
+            await db.disconnect()
+            print("[OK] Banco de dados desconectado")
+        except (asyncio.CancelledError, Exception):
+            # Ignora erros durante shutdown
+            pass
 
 
 app = FastAPI(
@@ -62,6 +101,9 @@ app.add_middleware(
 app.include_router(chat.router)
 app.include_router(sql.router)
 app.include_router(compliance.router)
+app.include_router(llm.router)
+app.include_router(cache.router)
+app.include_router(schema.router)  # Feature 003: Smart Response Detection
 
 
 @app.get("/")

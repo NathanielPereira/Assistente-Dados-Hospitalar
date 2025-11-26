@@ -1,10 +1,11 @@
 # Assistente de Dados para Hospitais Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2025-11-20
+Auto-generated from all feature plans. Last updated: 2024-11-26
 
 ## Active Technologies
 
 - Python 3.11 (backend FastAPI + LangChain), Node.js 20 / Next.js 14 (frontend) + LangChain SQLAgent, OpenAI-compatible LLM provider, FastAPI, Next.js App Router, NeonDB/PostgreSQL client, Redis-compatible cache (Upstash) para sessão, Great Expectations para validação de dados (001-hospital-data-agent)
+- Python 3.11 + FastAPI + asyncpg (003-smart-response-detection)
 
 ## Project Structure
 
@@ -24,6 +25,8 @@ Python 3.11 (backend FastAPI + LangChain), Node.js 20 / Next.js 14 (frontend): F
 
 ## Recent Changes
 
+- 003-smart-response-detection: Added Python 3.11 + FastAPI + asyncpg (Schema detection, question analysis, smart response generation)
+- 002-llm-fallback-cache: Added LLM provider fallback and cache mechanisms
 - 001-hospital-data-agent: Added Python 3.11 (backend FastAPI + LangChain), Node.js 20 / Next.js 14 (frontend) + LangChain SQLAgent, OpenAI-compatible LLM provider, FastAPI, Next.js App Router, NeonDB/PostgreSQL client, Redis-compatible cache (Upstash) para sessão, Great Expectations para validação de dados
 
 <!-- MANUAL ADDITIONS START -->

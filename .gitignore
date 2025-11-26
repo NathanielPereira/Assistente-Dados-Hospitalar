@@ -78,7 +78,8 @@ logs/
 .terraform.lock.hcl
 
 # Poetry
-poetry.lock
+# poetry.lock  # Manter lock file para reproduzibilidade
+.poetry/
 
 # OS
 Thumbs.db
@@ -99,4 +100,51 @@ secrets/
 *.pyc
 *.pyo
 *.pyd
+
+# Cache files
+*.cache
+.cache/
+data/response_cache.backup.*.json
+
+# Screenshots and images (except docs)
+*.png
+*.jpg
+*.jpeg
+!docs/**/*.png
+!docs/**/*.jpg
+!docs/**/*.jpeg
+
+# Backup files
+*.backup
+*.bak
+*.old
+
+# OS specific
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Gradle (if present)
+.gradle/
+gradle/
+*.gradle
+!gradle-wrapper.jar
+!gradle-wrapper.properties
+
+# Large dependency caches
+node_modules/
+__pycache__/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE specific
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
 

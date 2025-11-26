@@ -9,11 +9,11 @@
 [![Render](https://img.shields.io/badge/Render-Deployed-46e3b7.svg)](https://render.com/)
 [![Docker](https://img.shields.io/badge/Docker-Ready-blue.svg)](https://www.docker.com/)
 
-> **Sistema inteligente de assistência a dados hospitalares** que combina **LangChain SQLAgent** e **RAG (Retrieval Augmented Generation)** para responder perguntas clínicas e operacionais em linguagem natural, com **compliance LGPD/HIPAA**, **auditoria completa** e **observabilidade em tempo real**.
+> **Sistema inteligente de assistência a dados hospitalares** que combina **LangChain SQLAgent** para responder perguntas clínicas e operacionais em linguagem natural, com **auditoria completa** e **observabilidade em tempo real**.
 
 **🌐 Aplicação em Produção:**
-- **Frontend**: [https://assistente-dados-hospitalar.vercel.app](https://assistente-dados-hospitalar.vercel.app)
-- **Backend API**: [https://assistente-dados-hospitalar.onrender.com](https://assistente-dados-hospitalar.onrender.com)
+- **Frontend**: [https://assistente-dados-hospitalar.vercel.app](https://assistente-dados-hospitalar.vercel.app) (Vercel)
+- **Backend API**: [https://assistente-dados-hospitalar.onrender.com](https://assistente-dados-hospitalar.onrender.com) (Render)
 - **Documentação FastAPI**: [https://assistente-dados-hospitalar.onrender.com/docs](https://assistente-dados-hospitalar.onrender.com/docs)
 
 ---
@@ -23,11 +23,10 @@
 Este projeto demonstra uma **arquitetura moderna de IA aplicada à saúde**, integrando:
 
 - **🤖 Inteligência Artificial**: LangChain SQLAgent para geração automática de queries SQL
-- **📚 RAG (Retrieval Augmented Generation)**: Busca semântica em documentos hospitalares
 - **🌐 Streaming em Tempo Real**: Server-Sent Events (SSE) para respostas instantâneas
-- **🔒 Compliance**: LGPD/HIPAA com auditoria completa e trilhas imutáveis
-- **📊 Observabilidade**: Métricas SLO, alertas e painel de monitoramento
+- **📊 Observabilidade**: Métricas SLO, status de integrações e painel de monitoramento
 - **☁️ Cloud-Native**: Deploy na Vercel (frontend) e Render (backend)
+- **🔄 Em Desenvolvimento**: RAG completo, cache Redis, autenticação de usuários
 
 > **💡 Desenvolvido com Speckit**: Este projeto foi desenvolvido com a ajuda do **Speckit**, uma ferramenta poderosa de desenvolvimento assistido por IA que acelerou significativamente o processo de desenvolvimento, desde a arquitetura inicial até a implementação de funcionalidades complexas.
 
@@ -52,41 +51,65 @@ Este projeto demonstra uma **arquitetura moderna de IA aplicada à saúde**, int
 - **Server-Sent Events** (streaming de dados em tempo real)
 
 ### DevOps & Cloud
-- **Docker** (containerização)
-- **Vercel** (deploy automático do frontend via GitHub)
-- **Render** (deploy automático do backend via GitHub)
-- **NeonDB** (PostgreSQL serverless)
-- **GitHub Actions** (CI/CD)
+- **Vercel** (deploy automático do frontend via GitHub) ✅
+- **Render** (deploy automático do backend via GitHub) ✅
+- **NeonDB** (PostgreSQL serverless) ✅
+- **Docker** (containerização - configurado, não usado em produção)
+- **GitHub Actions** (CI/CD - planejado)
 
 ### Qualidade & Compliance
-- **pytest** (testes unitários e de integração)
-- **Playwright** (testes E2E)
-- **Great Expectations** (validação de dados)
-- **Auditoria LGPD/HIPAA** (trilhas imutáveis, exportação)
-- **Circuit Breaker Pattern** (resiliência)
+- **pytest** (testes unitários e de integração) ✅
+- **Auditoria** (trilhas de auditoria, exportação CSV/JSON) ✅
+- **Circuit Breaker Pattern** (resiliência para LLMs) ✅
+- **Playwright** (testes E2E - planejado)
+- **Great Expectations** (validação de dados - planejado)
 
 ---
 
 ## 📋 Funcionalidades Principais
 
-### 1. 💬 Consulta Clínica Unificada
-- Chat em **linguagem natural** com streaming em tempo real
-- Respostas combinando **dados estruturados (SQL)** + **documentos (RAG)**
+### ✅ Implementado
+
+#### 1. 💬 Consulta Clínica Unificada
+- Chat em **linguagem natural** com streaming em tempo real (SSE)
+- Geração automática de SQL com **LangChain SQLAgent**
 - **Cards visuais** para métricas agregadas (ocupação, receita, contagens)
 - Detecção automática de intenção e agregação inteligente
 - Respostas formatadas em cards únicos com valores finais
+- **✨ Smart Response Detection**: Detecta automaticamente perguntas não respondíveis, explica por que, e sugere alternativas relevantes
+- Cache de perguntas frequentes (in-memory)
 
-### 2. 🔧 SQL Workbench Assistido por IA
+#### 2. 🔧 SQL Workbench Assistido por IA
 - Geração automática de SQL com **LangChain SQLAgent**
 - Sugestões contextuais baseadas no schema do banco
 - Aprovação obrigatória antes de execução
+- Validação de SQL antes de executar
 - Resumos textuais automáticos dos resultados
 
-### 3. 📊 Compliance & Observabilidade
-- **Painel de Compliance**: Trilhas de auditoria LGPD/HIPAA
-- **Observability Dashboard**: Métricas SLO (p95 latency, uptime)
-- **Modo Degradado**: Read-only automático em caso de falhas
+#### 3. 📊 Compliance & Observabilidade
+- **Painel de Compliance**: Visualização de trilhas de auditoria
 - **Exportação**: CSV/JSON de trilhas de auditoria
+- **Observability Dashboard**: Métricas SLO (p95 latency, uptime)
+- **Status de Integrações**: Banco de dados e LLM providers
+- **Modo Degradado**: Read-only automático em caso de falhas
+
+#### 4. 🧠 Smart Response Detection (Feature 003)
+- **Detecção Automática de Schema**: Cacheia metadados do PostgreSQL (1 hora TTL)
+- **Análise de Perguntas**: Extrai entidades, mapeia sinônimos, calcula confiança (70% threshold)
+- **Respostas Inteligentes**: Explica por que não pode responder + 3 sugestões relevantes
+- **Adaptação Automática**: Schema atualiza automaticamente sem código
+- **Zero Breaking Changes**: 100% backward compatible com clientes existentes
+- **Performance**: < 1s para análise completa, < 100ms para cache hits
+
+### 🔄 Em Desenvolvimento
+
+- **RAG Completo**: Integração com documentos S3 para busca semântica
+- **Cache Redis**: Cache distribuído para otimização de performance
+- **Autenticação**: Sistema de autenticação e autorização de usuários
+- **Mascaramento de PII**: Proteção de dados sensíveis
+- **Criptografia**: Criptografia ponta a ponta para dados sensíveis
+- **Alertas Automáticos**: Sistema de notificações para eventos críticos
+- **Bases Legais Detalhadas**: Documentação completa de bases legais LGPD/HIPAA
 
 ---
 
@@ -106,16 +129,18 @@ Este projeto demonstra uma **arquitetura moderna de IA aplicada à saúde**, int
          │
     ┌────┴────┬──────────┬──────────┐
     │         │          │          │
-┌───▼───┐ ┌──▼───┐ ┌───▼───┐ ┌───▼───┐
-│NeonDB │ │  S3  │ │Redis  │ │OpenAI │
-│(PG)   │ │Docs  │ │Cache  │ │  API  │
-└───────┘ └──────┘ └───────┘ └───────┘
+┌───▼───┐ ┌───▼───┐ ┌───▼───┐
+│NeonDB │ │Cache  │ │LLMs   │
+│(PG)   │ │(local)│ │(Multi)│
+└───────┘ └───────┘ └───────┘
 ```
 
-### Camadas de Dados
-- **Bronze**: Dados brutos (raw)
-- **Prata**: Dados limpos e validados
-- **Ouro**: Dados agregados e mascarados (compliance)
+**Status das Integrações:**
+- ✅ **NeonDB (PostgreSQL)**: Conectado e operacional
+- ✅ **LLM Providers**: OpenAI, Google Gemini, Anthropic Claude (com fallback automático)
+- ✅ **Cache**: In-memory (local)
+- 🔄 **S3 (RAG)**: Planejado
+- 🔄 **Redis**: Planejado
 
 ---
 
@@ -251,14 +276,20 @@ great_expectations checkpoint run
 
 ---
 
-## 🔒 Compliance LGPD/HIPAA
+## 🔒 Compliance e Segurança
 
-- ✅ **Criptografia**: Dados sensíveis criptografados em repouso
-- ✅ **Mascaramento**: Dados PII mascarados na camada "ouro"
-- ✅ **Auditoria**: Trilhas imutáveis com hashes SHA-256
-- ✅ **Base Legal**: Documentação de base legal para cada acesso
-- ✅ **Retenção**: Políticas de retenção configuráveis
-- ✅ **Exportação**: Exportação de trilhas em CSV/JSON
+### ✅ Implementado
+- **Auditoria**: Trilhas de auditoria completas para todas as interações
+- **Exportação**: Exportação de trilhas em CSV/JSON
+- **Rastreamento**: Rastreamento completo de queries SQL e prompts
+- **Modo Degradado**: Proteção automática em caso de falhas
+
+### 🔄 Planejado
+- **Criptografia**: Dados sensíveis criptografados em repouso
+- **Mascaramento**: Dados PII mascarados automaticamente
+- **Base Legal**: Documentação detalhada de base legal para cada acesso
+- **Retenção**: Políticas de retenção configuráveis
+- **Autenticação**: Sistema de autenticação e autorização
 
 ---
 
@@ -319,15 +350,21 @@ Este projeto é um **demonstrativo técnico** com dados fictícios, criado para 
 
 ---
 
-## 🌟 Destaques do Projeto
+## 🌟 Status do Projeto
 
-- ✅ **100% Funcional**: Sistema completo e operacional em produção
-- ✅ **Production-Ready**: Deployado na Vercel e Render
-- ✅ **Bem Documentado**: Código limpo e documentação completa (incluindo FastAPI Docs)
-- ✅ **Testado**: Cobertura de testes adequada
-- ✅ **Escalável**: Arquitetura preparada para crescimento
-- ✅ **Seguro**: Compliance LGPD/HIPAA implementado
-- ✅ **Inteligente**: IA capaz de entender perguntas em linguagem natural e gerar SQL preciso
+### ✅ Funcionalidades Principais
+- **Sistema Operacional**: Deployado e funcionando em produção (Vercel + Render)
+- **Chat Inteligente**: Geração automática de SQL a partir de linguagem natural
+- **Smart Detection**: Detecta perguntas não respondíveis e sugere alternativas
+- **Observabilidade**: Monitoramento em tempo real do sistema
+- **Compliance**: Trilhas de auditoria e exportação de dados
+
+### 🔄 Próximos Passos
+- Integração completa com RAG (documentos S3)
+- Cache distribuído com Redis
+- Sistema de autenticação e autorização
+- Melhorias de segurança (criptografia, mascaramento de PII)
+- Alertas automáticos e notificações
 
 ---
 

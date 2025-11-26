@@ -1,0 +1,446 @@
+openapi: 3.0.3
+info:
+  title: Hospital Data Assistant - Smart Response Detection API
+  version: 1.0.0
+  description: |
+    API extensions for Feature 003: Smart Response Detection
+    
+    This document defines:
+    1. New endpoint: GET /v1/schema/info
+    2. Modified behavior: GET /v1/chat/stream (backward compatible)
+    
+    **Backward Compatibility**: All changes are additive. Existing clients
+    continue to work without modifications.
+
+servers:
+  - url: http://localhost:8000
+    description: Local development server
+
+paths:
+  /v1/schema/info:
+    get:
+      summary: Get Database Schema Information
+      description: |
+        Returns the current cached database schema including all tables,
+        columns, and metadata. This endpoint is useful for:
+        - Understanding what data is available
+        - Debugging entity matching issues
+        - Monitoring schema cache age
+        
+        **Performance**: 
+        - < 10ms (from cache)
+        - Cache refreshes automatically every 1 hour (configurable)
+      operationId: get_schema_info
+      tags:
+        - Schema
+      responses:
+        '200':
+          description: Schema information retrieved successfully
+          headers:
+            X-Cache-Age:
+              description: Seconds since schema was last refreshed
+              schema:
+                type: integer
+                example: 1234
+            X-Schema-Version:
+              description: Schema version identifier
+              schema:
+                type: string
+                example: "1.0.0"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SchemaInfo'
+              examples:
+                typical_hospital:
+                  summary: Typical hospital database schema
+                  value:
+                    tables:
+                      - name: leitos
+                        columns:
+                          - name: id
+                            type: integer
+                            nullable: false
+                          - name: numero
+                            type: varchar
+                            nullable: false
+                          - name: status
+                            type: varchar
+                            nullable: true
+                            description: "disponível, ocupado, manutenção"
+                        description: "Leitos hospitalares"
+                        row_count: 150
+                      - name: atendimentos
+                        columns:
+                          - name: id
+                            type: integer
+                            nullable: false
+                          - name: data
+                            type: date
+                            nullable: false
+                          - name: valor
+                            type: decimal
+                            nullable: true
+                        description: "Atendimentos e consultas"
+                        row_count: 5420
+                    last_updated: "2024-11-26T14:30:00Z"
+                    version: "1.0.0"
+        '503':
+          description: Schema detection failed, using stale cache
+          headers:
+            X-Cache-Age:
+              description: Seconds since schema was last refreshed (stale)
+              schema:
+                type: integer
+                example: 7200
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: "Schema detection failed. Using stale cache (2 hours old)."
+                  degraded_mode:
+                    type: boolean
+                    example: true
+      security:
+        - BearerAuth: []
+
+  /v1/chat/stream:
+    get:
+      summary: Stream Chat Responses (with Smart Detection)
+      description: |
+        **MODIFIED BEHAVIOR** (backward compatible):
+        
+        This endpoint now includes smart response detection. When a question
+        cannot be answered with available data, the system:
+        1. Analyzes the question against database schema
+        2. Calculates confidence score
+        3. If confidence < threshold (default 70%):
+           - Returns smart response with explanation and suggestions
+           - Skips SQL generation (faster, safer)
+        4. If confidence >= threshold:
+           - Proceeds with normal SQL generation (existing behavior)
+        
+        **Backward Compatibility**:
+        - Existing SSE event types still work
+        - New event types are added (clients can ignore unknown types)
+        - Final `[DONE]` marker is always sent
+        
+        **New SSE Event Types**:
+        - `data: [SMART_RESPONSE]` - Indicates smart response follows
+        - `data: [PARTIAL_MATCH]` - Some entities found, others not
+        - `data: [SUGGESTION]` - Alternative question suggestion
+      operationId: stream_chat_get
+      tags:
+        - Chat
+      parameters:
+        - name: session_id
+          in: query
+          required: true
+          description: Session identifier for conversation tracking
+          schema:
+            type: string
+            example: "abc123"
+        - name: prompt
+          in: query
+          required: true
+          description: User's natural language question
+          schema:
+            type: string
+            example: "Quantos leitos estão disponíveis?"
+      responses:
+        '200':
+          description: Streaming response (Server-Sent Events)
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                description: |
+                  SSE stream with 'data:' prefix lines.
+                  
+                  **Smart Response Format**:
+                  ```
+                  data: [SMART_RESPONSE]
+                  data: ✗ A informação sobre 'protocolos' não está disponível
+                  data: ✓ Informações disponíveis: leitos, atendimentos, especialidades
+                  data: ✓ Sugestões:
+                  data:   • Quantos leitos estão disponíveis?
+                  data:   • Qual a ocupação da UTI?
+                  data:   • Quais especialidades estão cadastradas?
+                  data: [DONE]
+                  ```
+                  
+                  **Partial Match Format**:
+                  ```
+                  data: [PARTIAL_MATCH]
+                  data: ⚠️ Mostrando resultados para 'atendimentos'. Informação sobre 'protocolos' não disponível.
+                  data: Executando SQL...
+                  data: **Dados da consulta:**
+                  data: [... SQL results ...]
+                  data: [DONE]
+                  ```
+                  
+                  **Normal Response** (existing):
+                  ```
+                  data: Executando SQL...
+                  data: **Dados da consulta:**
+                  data: [... SQL results ...]
+                  data: [DONE]
+                  ```
+              examples:
+                smart_response:
+                  summary: Unanswerable question (smart response)
+                  value: |
+                    data: [SMART_RESPONSE]
+                    data: ✗ A informação sobre 'protocolos de isolamento' não está disponível no sistema
+                    data: ✓ Informações disponíveis: leitos, atendimentos, especialidades, procedimentos
+                    data: ✓ Sugestões:
+                    data:   • Quantos leitos estão disponíveis?
+                    data:   • Qual a ocupação da UTI?
+                    data:   • Quais especialidades estão cadastradas?
+                    data: [DONE]
+                partial_match:
+                  summary: Partial match (some entities found)
+                  value: |
+                    data: [PARTIAL_MATCH]
+                    data: ⚠️ Mostrando resultados para 'atendimentos'. Informação sobre 'protocolos' não disponível.
+                    data: Executando SQL...
+                    data: ```sql
+                    data: SELECT COUNT(*) FROM atendimentos;
+                    data: ```
+                    data: **Dados da consulta:**
+                    data: ```json
+                    data: [{"count": 5420}]
+                    data: ```
+                    data: [DONE]
+                normal_response:
+                  summary: Answerable question (existing behavior)
+                  value: |
+                    data: Executando SQL...
+                    data: ```sql
+                    data: SELECT * FROM leitos WHERE status = 'disponível';
+                    data: ```
+                    data: **Dados da consulta:**
+                    data: ```json
+                    data: [{"id": 1, "numero": "101", "status": "disponível"}]
+                    data: ```
+                    data: [DONE]
+        '400':
+          description: Invalid request (missing required parameters)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: "Field required: prompt"
+      security:
+        - BearerAuth: []
+
+components:
+  schemas:
+    SchemaInfo:
+      type: object
+      required:
+        - tables
+        - last_updated
+        - version
+      properties:
+        tables:
+          type: array
+          description: All database tables in the public schema
+          items:
+            $ref: '#/components/schemas/TableInfo'
+        last_updated:
+          type: string
+          format: date-time
+          description: Timestamp when schema was last refreshed from database
+          example: "2024-11-26T14:30:00Z"
+        version:
+          type: string
+          description: Schema version identifier (for cache invalidation)
+          example: "1.0.0"
+
+    TableInfo:
+      type: object
+      required:
+        - name
+        - columns
+      properties:
+        name:
+          type: string
+          description: Table name as it appears in the database
+          example: "leitos"
+        columns:
+          type: array
+          description: All columns in this table
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/ColumnInfo'
+        description:
+          type: string
+          nullable: true
+          description: Table description from PostgreSQL comments (if available)
+          example: "Leitos hospitalares e seus status"
+        row_count:
+          type: integer
+          nullable: true
+          description: Approximate number of rows (cached, may be stale)
+          minimum: 0
+          example: 150
+
+    ColumnInfo:
+      type: object
+      required:
+        - name
+        - type
+        - nullable
+      properties:
+        name:
+          type: string
+          description: Column name as it appears in the database
+          example: "status"
+        type:
+          type: string
+          description: PostgreSQL data type (e.g., 'integer', 'varchar', 'timestamp')
+          example: "varchar"
+        nullable:
+          type: boolean
+          description: Whether column allows NULL values
+          example: true
+        description:
+          type: string
+          nullable: true
+          description: Column description from PostgreSQL comments (if available)
+          example: "Status do leito: disponível, ocupado, manutenção"
+
+    QuestionAnalysis:
+      type: object
+      description: |
+        Internal model (not exposed via API, documented for reference).
+        Result of analyzing a user question.
+      required:
+        - question
+        - entities_mentioned
+        - entities_found_in_schema
+        - entities_not_found
+        - confidence_score
+        - can_answer
+      properties:
+        question:
+          type: string
+          example: "Quantas camas estão disponíveis?"
+        entities_mentioned:
+          type: array
+          items:
+            type: string
+          example: ["camas", "disponíveis"]
+        entities_found_in_schema:
+          type: array
+          items:
+            type: string
+          example: ["leitos"]
+        entities_not_found:
+          type: array
+          items:
+            type: string
+          example: []
+        confidence_score:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+          example: 0.85
+        intent:
+          type: string
+          enum: [count, list, aggregate, filter, status, comparison, unknown]
+          example: "count"
+        can_answer:
+          type: boolean
+          example: true
+        reason:
+          type: string
+          nullable: true
+          example: null
+        similar_entities:
+          type: object
+          additionalProperties:
+            type: number
+            format: float
+          example:
+            leitos: 0.75
+        synonym_mappings:
+          type: object
+          additionalProperties:
+            type: string
+          example:
+            camas: "leitos"
+
+    SmartResponse:
+      type: object
+      description: |
+        Internal model (not exposed via API, documented for reference).
+        Response for questions that cannot be answered.
+      required:
+        - can_answer
+        - message
+        - available_entities
+        - suggestions
+      properties:
+        can_answer:
+          type: boolean
+          enum: [false]
+          description: Always false for smart responses
+        message:
+          type: string
+          description: Clear explanation of why question cannot be answered
+          example: "A informação sobre 'protocolos de isolamento' não está disponível no sistema"
+        available_entities:
+          type: array
+          items:
+            type: string
+          description: Data categories that ARE available in the database
+          example: ["leitos", "atendimentos", "especialidades", "procedimentos"]
+        suggestions:
+          type: array
+          items:
+            type: string
+          minItems: 3
+          maxItems: 3
+          description: Alternative questions that CAN be answered
+          example:
+            - "Quantos leitos estão disponíveis?"
+            - "Qual a ocupação da UTI?"
+            - "Quais especialidades estão cadastradas?"
+        partial_match:
+          type: boolean
+          description: True if some entities found but others not found
+          example: false
+        found_entities:
+          type: array
+          items:
+            type: string
+          description: Entities that WERE found (for partial matches)
+          example: []
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      description: |
+        JWT token authentication (if required by deployment).
+        For local development, authentication may be disabled.
+
+tags:
+  - name: Schema
+    description: Database schema introspection endpoints
+  - name: Chat
+    description: Natural language chat interface with SQL generation
+
+externalDocs:
+  description: Feature Specification
+  url: ../spec.md
+

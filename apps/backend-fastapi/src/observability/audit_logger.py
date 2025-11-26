@@ -21,15 +21,18 @@ class AuditLogger:
     def emit(
         self,
         *,
-        query_session_id: uuid.UUID,
+        query_session_id: uuid.UUID | str,  # Aceita UUID ou string
         event_type: str,
         actor: str,
         payload: dict,
         legal_basis: str,
     ) -> Path:
+        # Converte session_id para string (seja UUID ou string simples)
+        session_id_str = str(query_session_id) if isinstance(query_session_id, uuid.UUID) else query_session_id
+        
         event = {
             "event_id": str(uuid.uuid4()),
-            "query_session_id": str(query_session_id),
+            "query_session_id": session_id_str,
             "event_type": event_type,
             "actor": actor,
             "legal_basis": legal_basis,

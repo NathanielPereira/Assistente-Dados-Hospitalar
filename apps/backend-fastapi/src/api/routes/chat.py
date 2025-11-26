@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import uuid
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
@@ -9,6 +10,28 @@ from src.domain.query_session import QuerySession, QuerySessionRepository
 from src.agents.chat_pipeline import ChatPipeline
 
 router = APIRouter(prefix="/v1/chat", tags=["chat"])
+
+
+def _ensure_valid_uuid(session_id: str) -> str:
+    """
+    Garante que session_id seja um UUID válido.
+    Se não for, gera um UUID determinístico a partir da string.
+    
+    Args:
+        session_id: Session ID (pode ser UUID válido ou string simples)
+        
+    Returns:
+        UUID válido como string
+    """
+    try:
+        # Tenta parsear como UUID
+        uuid.UUID(session_id)
+        return session_id  # Já é válido
+    except ValueError:
+        # Gera UUID determinístico (UUID5) a partir da string
+        # Sempre retornará o mesmo UUID para o mesmo session_id
+        namespace = uuid.UUID('00000000-0000-0000-0000-000000000000')  # Namespace fixo
+        return str(uuid.uuid5(namespace, session_id))
 
 
 class CreateSessionRequest(BaseModel):
@@ -281,7 +304,90 @@ async def stream_chat_get(
     from src.database import db
     
     async def generate():
-        # Passo 1: feedback imediato
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"[chat/generate] 📨 Starting generate for prompt: '{prompt[:60]}...'")
+        print(f"[chat/generate] 📨 Starting generate for prompt: '{prompt[:60]}...'")
+        
+        # Passo 1: Verifica cache antes de processar
+        print(f"[chat/generate] 🔄 Loading cache service...")
+        from src.services.cache_service import get_cache_service
+        from src.services.question_matcher import QuestionMatcher
+        
+        print(f"[chat/generate] 🔄 Getting cache entries...")
+        cache_service = get_cache_service()
+        cache_entries = cache_service.get_all_entries()
+        print(f"[chat/generate] ✅ Cache has {len(cache_entries) if cache_entries else 0} entries")
+        
+        if cache_entries:
+            print(f"[chat/generate] 🔍 Checking cache match...")
+            match_result = QuestionMatcher.match(prompt, cache_entries)
+            if match_result:
+                entry, confidence = match_result
+                print(f"[chat/generate] ✅ CACHE HIT! confidence={confidence:.2f}, returning cached response")
+                # Cache hit! Retorna resposta instantânea
+                cache_service.increment_usage(entry.entry_id)
+                
+                # Executa SQL do cache
+                try:
+                    sql_agent_temp = SQLAgentService(llm=None, db_conn=db)
+                    result = await sql_agent_temp.execute(entry.sql, approved=True)
+                    
+                    # Verifica se é ocupação UTI e gera SUMMARY card
+                    if result.row_count > 0 and isinstance(result.data[0], dict):
+                        row0 = result.data[0]
+                        print(f"[chat/generate] 📊 Cache SQL result keys: {list(row0.keys())}")
+                        
+                        # Detecta se é dados de ocupação (com ou sem porcentagem)
+                        has_occupation_data = (
+                            ("ocupados" in row0 or "leitos_ocupados" in row0) and 
+                            ("total" in row0 or "total_leitos" in row0)
+                        )
+                        
+                        if has_occupation_data and ("taxa" in prompt.lower() or "ocupação" in prompt.lower() or "ocupacao" in prompt.lower()):
+                            # Gera SUMMARY card para ocupação
+                            ocupados = row0.get('ocupados') or row0.get('leitos_ocupados', 0)
+                            total = row0.get('total') or row0.get('total_leitos', 0)
+                            
+                            # Calcula taxa se não estiver no resultado
+                            taxa = row0.get('taxa_ocupacao') or row0.get('taxa_ocupacao_percentual')
+                            if taxa is None and total > 0:
+                                taxa = round(100.0 * int(ocupados) / int(total), 2)
+                            
+                            print(f"[chat/generate] 📊 Generating SUMMARY card from cache: ocupados={ocupados}, total={total}, taxa={taxa}")
+                            
+                            summary = (
+                                "SUMMARY|tipo=uti_ocupacao;"
+                                f"ocupados={ocupados};"
+                                f"total={total};"
+                                f"taxa={taxa}"
+                            )
+                            yield f"data: {summary}\n\n"
+                            yield "data: [DONE]\n\n"
+                            print(f"[chat/generate] ✅ Cache SUMMARY card sent, ending stream")
+                            return
+                    
+                    # Caso contrário, usa template de texto normal
+                    response = entry.response_template
+                    print(f"[chat/generate] 📄 Cache template: '{response[:100]}...'")
+                    if result.row_count > 0 and isinstance(result.data[0], dict):
+                        # Substitui placeholders no template
+                        row = result.data[0]
+                        for key, value in row.items():
+                            response = response.replace(f"{{{key}}}", str(value))
+                    
+                    print(f"[chat/generate] 📤 Sending cache response: '{response[:100]}...'")
+                    yield f"data: {response}\n\n"
+                    yield "data: [DONE]\n\n"
+                    print(f"[chat/generate] ✅ Cache response sent, ending stream")
+                    return
+                except Exception as cache_err:
+                    # Se falhar ao executar SQL do cache, continua com LLM
+                    print(f"[chat] Erro ao executar SQL do cache: {cache_err}")
+            else:
+                print(f"[chat/generate] ❌ No cache match, proceeding with LLM")
+        
+        # Passo 2: feedback imediato (se não encontrou no cache)
         yield "data: Analisando sua pergunta...\n\n"
         
         # Inicializa serviços
@@ -295,14 +401,95 @@ async def stream_chat_get(
         
         try:
             # Gera SQL baseado no prompt
+            logger.info(f"[chat/generate] 🔄 About to call sql_agent.suggest()...")
+            print(f"[chat/generate] 🔄 About to call sql_agent.suggest()...")
+            
             suggestion = await sql_agent.suggest(prompt)
+            
+            logger.info(f"[chat/generate] ✅ suggest() returned! Type: {type(suggestion)}")
+            print(f"[chat/generate] ✅ suggest() returned! Type: {type(suggestion)}")
+            
             sql = suggestion.sql
 
             # Log do SQL gerado (não mostra para o usuário por padrão, apenas em debug)
-            print(f"[chat] SQL gerado: {sql[:200]}...")
+            logger.info(f"[chat/generate] 📄 SQL returned ({len(sql)} chars): {sql[:200]}...")
+            print(f"[chat/generate] 📄 SQL returned ({len(sql)} chars): {sql[:200]}...")
+            
+            # T053-T056: Smart Response Integration - Handle unanswerable questions
+            if sql and sql.strip().startswith("--SMART_RESPONSE_MARKER"):
+                print(f"[smart_detection] Detected unanswerable question, generating smart response")
+                
+                # Parse analysis info from comments
+                comments = suggestion.comments or ""
+                parts = comments.split("|")
+                
+                # Get schema and generate smart response
+                from src.services.schema_detector_service import SchemaDetectorService
+                from src.services.question_analyzer_service import QuestionAnalyzerService
+                from src.services.suggestion_generator_service import SuggestionGeneratorService
+                
+                schema = await SchemaDetectorService.get_schema()
+                analysis = QuestionAnalyzerService.analyze_question(prompt, schema)
+                smart_response = SuggestionGeneratorService.generate_smart_response(
+                    analysis, 
+                    schema,
+                    is_partial_match=analysis.is_partial_match
+                )
+                
+                # Stream smart response
+                yield "data: [SMART_RESPONSE]\n\n"
+                
+                # Format and stream response components
+                for message_line in smart_response.format_for_streaming():
+                    yield f"data: {message_line}\n\n"
+                
+                # T057: Audit logging (simplified - console only for now)
+                try:
+                    print(f"[audit] Question analysis logged: can_answer=False, confidence={analysis.confidence_score:.3f}, reason={analysis.reason}")
+                except Exception as audit_error:
+                    print(f"[audit] Error logging analysis decision: {audit_error}")
+                
+                yield "data: [DONE]\n\n"
+                return
+            
+            # Handle partial match (some entities found, others not)
+            if sql and "--PARTIAL_MATCH" in sql:
+                yield "data: [PARTIAL_MATCH]\n\n"
+                yield "data: ⚠️ Alguns dados solicitados não estão disponíveis, mostrando informações parciais.\n\n"
+            
+            # Verifica se é uma resposta de informação não disponível (legacy)
+            if suggestion.comments and "INFO_NAO_DISPONIVEL" in suggestion.comments:
+                # Extrai informações da resposta especial
+                parts = suggestion.comments.split("|")
+                entidade = "informação solicitada"
+                sugestoes = []
+                
+                for part in parts:
+                    if part.startswith("entidade="):
+                        entidade = part.split("=", 1)[1]
+                    elif part.startswith("sugestoes="):
+                        sugestoes_str = part.split("=", 1)[1]
+                        sugestoes = sugestoes_str.split("|") if sugestoes_str else []
+                
+                # Mostra mensagem apropriada
+                yield "data: \n\n**📋 Informação Não Disponível**\n\n"
+                yield f"data: ⚠️ **A informação sobre '{entidade}' não está cadastrada no banco de dados.**\n\n"
+                yield "data: **Informações disponíveis no banco:**\n\n"
+                yield "data: - **Leitos**: Informações sobre leitos hospitalares (UTI pediátrica, UTI adulto, enfermaria)\n"
+                yield "data: - **Atendimentos**: Informações sobre procedimentos médicos realizados e valores faturados\n"
+                yield "data: - **Especialidades**: Informações sobre especialidades médicas cadastradas\n\n"
+                
+                if sugestoes:
+                    yield "data: **💡 Sugestões de perguntas que podem ser respondidas:**\n\n"
+                    for i, sugestao in enumerate(sugestoes[:5], 1):
+                        yield f"data: {i}. {sugestao}\n"
+                    yield "data: \n"
+                
+                yield "data: [DONE]\n\n"
+                return
             
             # Valida se o SQL parece correto antes de executar
-            if not self._validate_sql(sql):
+            if not _validate_sql(sql):
                 yield (
                     "data: ⚠️ **Aviso:** O SQL gerado pode não estar correto.\n"
                     "data: Tentando executar mesmo assim...\n\n"
@@ -326,12 +513,32 @@ async def stream_chat_get(
                 row0 = result.data[0]
 
                 # 1) Ocupação de UTI (card especial)
-                if all(k in row0 for k in ("ocupados", "total", "taxa_ocupacao")):
+                # Aceita tanto 'taxa_ocupacao' quanto 'taxa_ocupacao_percentual' ou 'leitos_ocupados'
+                logger.info(f"[chat/generate] Checking occupation data. row0 keys: {list(row0.keys())}")
+                print(f"[chat/generate] 🔍 Checking occupation data. row0 keys: {list(row0.keys())}")
+                
+                has_occupation_data = (
+                    ("ocupados" in row0 or "leitos_ocupados" in row0) and 
+                    ("total" in row0 or "total_leitos" in row0) and
+                    ("taxa_ocupacao" in row0 or "taxa_ocupacao_percentual" in row0)
+                )
+                
+                logger.info(f"[chat/generate] has_occupation_data = {has_occupation_data}")
+                print(f"[chat/generate] ✅ has_occupation_data = {has_occupation_data}")
+                
+                if has_occupation_data:
+                    ocupados = row0.get('ocupados') or row0.get('leitos_ocupados', 0)
+                    total = row0.get('total') or row0.get('total_leitos', 0)
+                    taxa = row0.get('taxa_ocupacao') or row0.get('taxa_ocupacao_percentual', 0)
+                    
+                    logger.info(f"[chat/generate] 📊 Generating occupation card: ocupados={ocupados}, total={total}, taxa={taxa}")
+                    print(f"[chat/generate] 📊 Generating occupation card: ocupados={ocupados}, total={total}, taxa={taxa}")
+                    
                     summary = (
                         "SUMMARY|tipo=uti_ocupacao;"
-                        f"ocupados={row0.get('ocupados')};"
-                        f"total={row0.get('total')};"
-                        f"taxa={row0.get('taxa_ocupacao')}"
+                        f"ocupados={ocupados};"
+                        f"total={total};"
+                        f"taxa={taxa}"
                     )
                     yield f"data: {summary}\n\n"
                     summary_generated = True
@@ -392,7 +599,7 @@ async def stream_chat_get(
                             VALUES (%s, %s, %s, %s, %s)
                             """,
                             (
-                                session_id,
+                                _ensure_valid_uuid(session_id),  # Converte para UUID válido
                                 "demo-user",
                                 prompt,
                                 result.sql_executed,
@@ -421,7 +628,7 @@ async def stream_chat_get(
                             VALUES (%s, %s, %s, %s, %s)
                             """,
                             (
-                                session_id,
+                                _ensure_valid_uuid(session_id),  # Converte para UUID válido
                                 "demo-user",
                                 prompt,
                                 result.sql_executed,

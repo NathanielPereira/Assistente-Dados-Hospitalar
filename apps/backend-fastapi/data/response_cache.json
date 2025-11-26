@@ -1,0 +1,44 @@
+{
+  "version": "1.0",
+  "last_updated": "2025-11-26T18:20:45.451656",
+  "entries": [
+    {
+      "entry_id": "364b398c-6b24-4c63-bdc0-ec0e6d3490bb",
+      "question": "Teste de entrada manual",
+      "variations": [],
+      "keywords": [
+        "teste"
+      ],
+      "sql": "SELECT 1 as teste",
+      "response_template": "Teste: {teste}",
+      "requires_realtime": false,
+      "created_at": "2025-11-26T14:32:24.654004",
+      "last_used": "2025-11-26T14:43:05.479074",
+      "usage_count": 3,
+      "confidence": 0.0,
+      "validated": false,
+      "validation_metadata": null,
+      "provider_used": null
+    },
+    {
+      "entry_id": "744620f7-3a6d-43e9-9d77-b42d1235cf9d",
+      "question": "Qual a taxa de ocupação da UTI?",
+      "variations": [],
+      "keywords": [
+        "taxa",
+        "ocupação",
+        "UTI"
+      ],
+      "sql": "SELECT COUNT(*) FILTER (WHERE status = 'ocupado') as ocupados, COUNT(*) as total FROM leitos WHERE tipo = 'UTI'",
+      "response_template": "A taxa de ocupação da UTI é {ocupados} leitos ocupados de {total} leitos totais.",
+      "requires_realtime": false,
+      "created_at": "2025-11-26T14:36:05.416340",
+      "last_used": "2025-11-26T18:20:45.451656",
+      "usage_count": 20,
+      "confidence": 0.0,
+      "validated": false,
+      "validation_metadata": null,
+      "provider_used": null
+    }
+  ]
+}

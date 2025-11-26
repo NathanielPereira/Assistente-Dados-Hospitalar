@@ -1,6 +1,6 @@
-# Contribuindo para Hospital Data Assistant
+# Contribuindo para Assistente de Dados Hospitalar
 
-Obrigado por considerar contribuir! Este é um projeto demonstrativo, mas sugestões e melhorias são bem-vindas.
+Obrigado por considerar contribuir! Este é um projeto demonstrativo em desenvolvimento ativo, e sugestões e melhorias são muito bem-vindas.
 
 ## 🎯 Como Contribuir
 

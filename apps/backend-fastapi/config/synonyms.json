@@ -1,0 +1,16 @@
+{
+  "version": "1.0.0",
+  "updated": "2024-11-26",
+  "mappings": {
+    "camas": "leitos",
+    "cama": "leitos",
+    "quartos": "leitos",
+    "consultas": "atendimentos",
+    "consulta": "atendimentos",
+    "pacientes": "atendimentos",
+    "doutores": "especialidades",
+    "médicos": "especialidades"
+  },
+  "notes": "Add common colloquial terms users might use. This file can be updated without redeploying code."
+}
+

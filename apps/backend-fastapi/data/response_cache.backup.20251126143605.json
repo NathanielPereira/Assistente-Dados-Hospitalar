@@ -1,0 +1,24 @@
+{
+  "version": "1.0",
+  "last_updated": "2025-11-26T14:32:24.656140",
+  "entries": [
+    {
+      "entry_id": "364b398c-6b24-4c63-bdc0-ec0e6d3490bb",
+      "question": "Teste de entrada manual",
+      "variations": [],
+      "keywords": [
+        "teste"
+      ],
+      "sql": "SELECT 1 as teste",
+      "response_template": "Teste: {teste}",
+      "requires_realtime": false,
+      "created_at": "2025-11-26T14:32:24.654004",
+      "last_used": null,
+      "usage_count": 0,
+      "confidence": 0.0,
+      "validated": false,
+      "validation_metadata": null,
+      "provider_used": null
+    }
+  ]
+}
