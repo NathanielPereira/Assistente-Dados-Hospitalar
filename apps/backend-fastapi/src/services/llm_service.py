@@ -255,17 +255,21 @@ class LLMService:
 
         # Detecta tipo de erro
         error_str = str(error).lower()
-        if "429" in error_str or "rate limit" in error_str:
+        if "429" in error_str or "rate limit" in error_str or "quota" in error_str or "insufficient_quota" in error_str:
             provider.mark_rate_limited()
+            logger.warning(f"⚠️ Provedor {provider_id} atingiu limite de quota/rate limit")
         elif "401" in error_str or "403" in error_str:
             provider.mark_error()
+            logger.error(f"❌ Provedor {provider_id} com erro de autenticação/autorização")
         else:
             provider.mark_unavailable()
+            logger.warning(f"⚠️ Provedor {provider_id} indisponível: {error}")
 
         # Abre circuit breaker se necessário
         if provider.consecutive_failures >= 3:
             provider.open_circuit_breaker()
             llm_metrics.record_circuit_breaker_open(provider_id)
+            logger.error(f"🔴 Circuit breaker aberto para {provider_id} após {provider.consecutive_failures} falhas")
 
         llm_metrics.record_failure(provider_id)
         logger.warning(
@@ -341,7 +345,10 @@ class LLMService:
 
     @classmethod
     def get_llm(cls) -> Optional[BaseLanguageModel]:
-        """Retorna instância do LLM disponível ou None se nenhum estiver disponível."""
+        """Retorna instância do LLM disponível ou None se nenhum estiver disponível.
+        
+        Tenta todos os provedores disponíveis em ordem de prioridade antes de retornar None.
+        """
         import time
         start_time = time.perf_counter()
         
@@ -351,34 +358,115 @@ class LLMService:
             logger.warning("Nenhum provedor de LLM configurado")
             return None
 
-        # Tenta obter LLM por rotação ou prioridade
-        provider_id = cls._rotate_providers()
-        if not provider_id:
-            # Fallback: tenta qualquer provedor disponível
-            for provider in sorted(cls._providers.values(), key=lambda x: x.priority):
-                if provider.is_available():
-                    provider_id = provider.provider_id
-                    break
-
-        if not provider_id:
-            logger.warning("Nenhum provedor de LLM disponível")
-            return None
-
-        # Retorna ou cria instância
-        if provider_id not in cls._llm_instances:
-            provider = cls._providers[provider_id]
-            llm = cls._create_llm_instance(provider)
-            if llm:
-                cls._llm_instances[provider_id] = llm
-            else:
-                return None
-
-        # Registra métricas de uso
-        latency = time.perf_counter() - start_time
-        llm_metrics.record_usage(provider_id, latency)
-        cls._track_usage(provider_id)
+        # Lista de provedores para tentar (por prioridade)
+        providers_to_try = sorted(cls._providers.values(), key=lambda x: x.priority)
         
-        return cls._llm_instances.get(provider_id)
+        # Tenta obter LLM por rotação ou prioridade primeiro
+        provider_id = cls._rotate_providers()
+        if provider_id:
+            providers_to_try = [p for p in providers_to_try if p.provider_id == provider_id] + \
+                              [p for p in providers_to_try if p.provider_id != provider_id]
+        
+        # Tenta cada provedor até encontrar um que funcione
+        for provider in providers_to_try:
+            if not provider.enabled:
+                continue
+                
+            # Se circuit breaker está aberto, pula este provedor
+            if provider.circuit_breaker_open:
+                logger.debug(f"Provedor {provider.provider_id} com circuit breaker aberto, pulando...")
+                continue
+            
+            provider_id = provider.provider_id
+            
+            # Tenta obter ou criar instância
+            if provider_id not in cls._llm_instances:
+                llm = cls._create_llm_instance(provider)
+                if llm:
+                    cls._llm_instances[provider_id] = llm
+                    provider.mark_available()
+                    logger.info(f"Instância LLM criada para {provider_id}")
+                else:
+                    logger.warning(f"Falha ao criar instância LLM para {provider_id}")
+                    provider.mark_unavailable()
+                    continue
+            
+            # Verifica se instância existe e está válida
+            llm_instance = cls._llm_instances.get(provider_id)
+            if llm_instance:
+                # Registra métricas de uso
+                latency = time.perf_counter() - start_time
+                llm_metrics.record_usage(provider_id, latency)
+                cls._track_usage(provider_id)
+                provider.mark_available()
+                logger.debug(f"Usando provedor LLM: {provider_id}")
+                return llm_instance
+            else:
+                logger.warning(f"Instância LLM não encontrada para {provider_id}")
+                provider.mark_unavailable()
+
+        # Se chegou aqui, nenhum provedor funcionou
+        logger.error("Nenhum provedor de LLM disponível após tentar todos os provedores configurados")
+        return None
+
+    @classmethod
+    def get_llm_with_fallback(cls, failed_provider_id: Optional[str] = None) -> Optional[BaseLanguageModel]:
+        """Retorna instância do LLM disponível, tentando todos os provedores em caso de falha.
+        
+        Se um provedor falhar (ex: 429 rate limit), tenta os outros automaticamente.
+        """
+        if failed_provider_id:
+            # Marca o provedor que falhou como rate limited ou unavailable
+            if failed_provider_id in cls._providers:
+                provider = cls._providers[failed_provider_id]
+                error_str = str(failed_provider_id).lower()
+                if "429" in error_str or "quota" in error_str or "rate limit" in error_str:
+                    provider.mark_rate_limited()
+                    logger.warning(f"Provedor {failed_provider_id} marcado como rate limited, tentando outros...")
+                else:
+                    provider.mark_unavailable()
+                    logger.warning(f"Provedor {failed_provider_id} marcado como unavailable, tentando outros...")
+        
+        # Tenta todos os provedores disponíveis (exceto o que falhou)
+        providers_to_try = sorted(cls._providers.values(), key=lambda x: x.priority)
+        
+        for provider in providers_to_try:
+            if not provider.enabled:
+                continue
+            
+            # Pula o provedor que falhou
+            if failed_provider_id and provider.provider_id == failed_provider_id:
+                continue
+                
+            # Se circuit breaker está aberto, pula este provedor
+            if provider.circuit_breaker_open:
+                logger.debug(f"Provedor {provider.provider_id} com circuit breaker aberto, pulando...")
+                continue
+            
+            provider_id = provider.provider_id
+            
+            # Tenta obter ou criar instância
+            if provider_id not in cls._llm_instances:
+                llm = cls._create_llm_instance(provider)
+                if llm:
+                    cls._llm_instances[provider_id] = llm
+                    provider.mark_available()
+                    logger.info(f"✅ Instância LLM criada para {provider_id} (fallback)")
+                else:
+                    logger.warning(f"Falha ao criar instância LLM para {provider_id}")
+                    provider.mark_unavailable()
+                    continue
+            
+            # Verifica se instância existe e está válida
+            llm_instance = cls._llm_instances.get(provider_id)
+            if llm_instance:
+                provider.mark_available()
+                logger.info(f"✅ Usando provedor LLM (fallback): {provider_id}")
+                return llm_instance
+
+        # Se chegou aqui, nenhum provedor funcionou
+        logger.error("❌ Nenhum provedor de LLM disponível após fallback")
+        return None
 
     @classmethod
     def is_available(cls) -> bool:

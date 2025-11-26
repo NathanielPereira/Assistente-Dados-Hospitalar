@@ -44,6 +44,7 @@ class SQLAgentService:
         self.db_conn = db_conn
         self.sql_agent = None
         self.sql_db = None
+        self._initialized_llm = None  # Rastreia qual LLM foi usado para inicializar
         
         # Inicializa se tiver LLM e conexão
         if llm and db_conn:
@@ -53,6 +54,11 @@ class SQLAgentService:
         """Inicializa SQLAgent do LangChain com prompt customizado e contexto melhorado."""
         if not create_sql_agent or not SQLDatabase:
             return
+        
+        # Se o LLM mudou, precisa reinicializar
+        if self._initialized_llm != self.llm:
+            self.sql_agent = None
+            self.sql_db = None
         
         try:
             # Ajusta URI para usar driver psycopg (v3) em vez de psycopg2
@@ -119,11 +125,14 @@ class SQLAgentService:
                 verbose=True,
                 agent_type="openai-tools"
             )
+            # Marca o LLM como inicializado
+            self._initialized_llm = self.llm
         except Exception as e:
             print(f"Erro ao inicializar SQLAgent: {e}")
             import traceback
             traceback.print_exc()
             self.sql_agent = None
+            self._initialized_llm = None
 
     async def suggest(self, prompt: str, tables: List[str] = None) -> SQLSuggestion:
         """Gera SQL comentado baseado em prompt natural usando LangChain SQLAgent."""
@@ -285,12 +294,63 @@ class SQLAgentService:
                     return self._generate_minimal_fallback(prompt)
                     
             except Exception as e:
+                error_str = str(e).lower()
+                is_rate_limit = "429" in error_str or "rate limit" in error_str or "quota" in error_str or "insufficient_quota" in error_str
+                
                 logger.error(f"[sql_agent] ERRO ao gerar SQL com LangChain: {e}")
                 print(f"[sql_agent] ERRO ao gerar SQL com LangChain: {e}")
+                
+                # Se for erro de rate limit/quota, tenta fazer fallback para outro provedor
+                if is_rate_limit and self.llm:
+                    # Identifica qual provedor falhou
+                    failed_provider_id = None
+                    try:
+                        from src.services.llm_service import LLMService
+                        # Tenta identificar o provedor atual
+                        for provider_id, llm_instance in LLMService._llm_instances.items():
+                            if llm_instance == self.llm:
+                                failed_provider_id = provider_id
+                                break
+                    except:
+                        pass
+                    
+                    if failed_provider_id:
+                        logger.warning(f"[sql_agent] ⚠️ Provedor {failed_provider_id} atingiu limite de quota, tentando fallback para outro provedor...")
+                        print(f"[sql_agent] ⚠️ Provedor {failed_provider_id} atingiu limite de quota, tentando fallback para outro provedor...")
+                        
+                        # Tenta obter outro LLM
+                        try:
+                            from src.services.llm_service import LLMService
+                            new_llm = LLMService.get_llm_with_fallback(failed_provider_id=failed_provider_id)
+                            if new_llm and new_llm != self.llm:
+                                logger.info(f"[sql_agent] ✅ Fallback para novo provedor LLM bem-sucedido")
+                                print(f"[sql_agent] ✅ Fallback para novo provedor LLM bem-sucedido")
+                                # Atualiza o LLM e tenta novamente
+                                self.llm = new_llm
+                                self._initialize_agent()
+                                # Tenta novamente com o novo provedor
+                                try:
+                                    enhanced_prompt = self._enhance_prompt(prompt)
+                                    result = await self.sql_agent.ainvoke({"input": enhanced_prompt})
+                                    sql_clean = self._extract_sql_from_response(str(result))
+                                    if sql_clean and "SELECT" in sql_clean.upper():
+                                        logger.info(f"[sql_agent] ✅ SQL gerado com sucesso usando provedor de fallback")
+                                        return SQLSuggestion(
+                                            sql=sql_clean,
+                                            comments=f"SQL gerado pelo LangChain SQLAgent (fallback) baseado no contexto do banco",
+                                            estimated_rows=None
+                                        )
+                                except Exception as retry_error:
+                                    logger.warning(f"[sql_agent] ⚠️ Fallback também falhou: {retry_error}")
+                                    print(f"[sql_agent] ⚠️ Fallback também falhou: {retry_error}")
+                        except Exception as fallback_error:
+                            logger.error(f"[sql_agent] ❌ Erro ao tentar fallback de provedor: {fallback_error}")
+                            print(f"[sql_agent] ❌ Erro ao tentar fallback de provedor: {fallback_error}")
+                
                 import traceback
                 traceback.print_exc()
-                logger.info(f"[sql_agent] 🔄 Chamando fallback devido ao erro...")
-                print(f"[sql_agent] 🔄 Chamando fallback devido ao erro...")
+                logger.info(f"[sql_agent] 🔄 Chamando fallback mínimo devido ao erro...")
+                print(f"[sql_agent] 🔄 Chamando fallback mínimo devido ao erro...")
                 # Fallback mínimo apenas em caso de erro
                 fallback_result = self._generate_minimal_fallback(prompt)
                 logger.info(f"[sql_agent] ✅ Fallback retornou: {type(fallback_result)}")

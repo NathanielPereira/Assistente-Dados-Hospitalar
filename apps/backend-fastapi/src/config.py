@@ -28,8 +28,9 @@ class Settings:
     OPENROUTER_API_KEY: Optional[str] = os.getenv("OPENROUTER_API_KEY")
     
     # LLM Provider Configuration
-    LLM_PROVIDER_PRIORITY: str = os.getenv("LLM_PROVIDER_PRIORITY", "openai,google,huggingface,openrouter")
-    LLM_ROTATION_STRATEGY: str = os.getenv("LLM_ROTATION_STRATEGY", "round_robin")
+    # Prioridade padrão: Google primeiro (gratuito), depois OpenAI, HuggingFace, OpenRouter
+    LLM_PROVIDER_PRIORITY: str = os.getenv("LLM_PROVIDER_PRIORITY", "google,openai,openrouter,huggingface")
+    LLM_ROTATION_STRATEGY: str = os.getenv("LLM_ROTATION_STRATEGY", "priority")
 
     # S3
     AWS_ACCESS_KEY_ID: Optional[str] = os.getenv("AWS_ACCESS_KEY_ID")
