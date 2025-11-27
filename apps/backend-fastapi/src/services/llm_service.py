@@ -221,16 +221,20 @@ class LLMService:
             
         try:
             if provider.provider_type == ProviderType.GOOGLE and ChatGoogleGenerativeAI:
+                # Google Gemini: usar modelo padrão ou gemini-1.0-pro (mais compatível)
+                # Se não especificar model, usa o padrão da biblioteca
                 return ChatGoogleGenerativeAI(
-                    model="gemini-pro",  # Modelo estável e amplamente suportado
+                    model=None,  # Usa modelo padrão da biblioteca (geralmente gemini-pro ou gemini-1.0-pro)
                     temperature=0,
                     google_api_key=provider.api_key,
                     timeout=timeout_seconds,
                     max_retries=max_retries,
                 )
             elif provider.provider_type == ProviderType.ANTHROPIC and ChatAnthropic:
+                # Modelos Claude disponíveis: claude-3-5-sonnet-20241022, claude-3-opus-20240229, claude-3-sonnet-20240229, claude-3-haiku-20240307
+                # Usando claude-3-5-sonnet-20241022 (mais recente) ou fallback para haiku (mais barato)
                 return ChatAnthropic(
-                    model="claude-3-haiku-20240307",
+                    model="claude-3-5-sonnet-20241022",  # Modelo mais recente e poderoso
                     temperature=0,
                     anthropic_api_key=provider.api_key,
                     timeout=timeout_seconds,
@@ -267,8 +271,10 @@ class LLMService:
                     return None
             elif provider.provider_type == ProviderType.OPENROUTER and ChatOpenAI:
                 # OpenRouter usa OpenAI client com endpoint customizado
+                # Modelos OpenRouter: openai/gpt-3.5-turbo, anthropic/claude-3-haiku, etc.
+                # Usando meta-llama/llama-3.2-3b-instruct como alternativa gratuita
                 return ChatOpenAI(
-                    model="openai/gpt-3.5-turbo",
+                    model="meta-llama/llama-3.2-3b-instruct:free",  # Modelo gratuito no OpenRouter
                     temperature=0,
                     openai_api_key=provider.api_key,
                     openai_api_base="https://openrouter.ai/api/v1",
@@ -276,8 +282,10 @@ class LLMService:
                     max_retries=max_retries,
                 )
             elif provider.provider_type == ProviderType.OPENAI and ChatOpenAI:
+                # Modelos OpenAI: gpt-4o, gpt-4-turbo, gpt-4, gpt-3.5-turbo
+                # Usando gpt-3.5-turbo como padrão (mais barato e estável)
                 return ChatOpenAI(
-                    model="gpt-3.5-turbo",
+                    model="gpt-3.5-turbo",  # Modelo estável e econômico
                     temperature=0,
                     openai_api_key=provider.api_key,
                     timeout=timeout_seconds,
