@@ -392,11 +392,45 @@ async def stream_chat_get(
         
         # Inicializa serviços
         llm = LLMService.get_llm()
+        
+        # Verifica se há pelo menos um LLM disponível
+        if not llm:
+            available_providers = LLMService.get_providers_status()
+            unavailable_count = sum(1 for p in available_providers if p.get("status") != "available")
+            
+            yield (
+                "data: ⚠️ **Aviso: Nenhum provedor de LLM disponível no momento**\n\n"
+                "data: O sistema precisa de um provedor de IA configurado para gerar consultas SQL.\n\n"
+                "data: **Provedores configurados:**\n"
+            )
+            
+            for provider in available_providers:
+                status_icon = "✅" if provider.get("status") == "available" else "❌"
+                yield f"data: - {status_icon} {provider.get('provider_id', 'unknown').upper()}: {provider.get('status', 'unknown')}\n"
+            
+            yield (
+                "\n\n"
+                "data: **Possíveis motivos:**\n"
+                "data: - Chaves de API não configuradas ou inválidas\n"
+                "data: - Quota/rate limit atingido em todos os provedores\n"
+                "data: - Circuit breaker aberto após múltiplas falhas\n"
+                "data: - Problemas temporários de conexão com as APIs\n\n"
+                "data: **Sugestões:**\n"
+                "data: - Verifique as variáveis de ambiente no Render (GOOGLE_API_KEY, OPENAI_API_KEY, etc.)\n"
+                "data: - Aguarde alguns minutos e tente novamente (circuit breakers fecham após 5 minutos)\n"
+                "data: - Configure pelo menos um provedor LLM válido (Google Gemini é recomendado e gratuito)\n\n"
+                "data: O sistema tentará usar fallback mínimo de SQL, mas respostas podem ser limitadas.\n\n"
+            )
+        
         sql_agent = SQLAgentService(llm=llm, db_conn=db)
 
         # Indica modo de operação apenas em log (não exibe para o usuário)
         mode = "LangChain SQLAgent (LLM ativo)" if sql_agent.sql_agent else "SQL simples (fallback, sem LangChain)"
         print(f"[chat] Modo de operacao: {mode}")
+        
+        if not sql_agent.sql_agent:
+            yield "data: ⚠️ Usando modo fallback (sem IA) - SQL será gerado com base em padrões simples\n\n"
+        
         yield "data: \n\nConsultando banco de dados...\n\n"
         
         try:
@@ -718,6 +752,18 @@ async def stream_chat_get(
         except Exception as e:
             import traceback
             error_trace = traceback.format_exc()
+            error_str = str(e).lower()
+            
+            # Detecta tipo de erro para mensagem mais específica
+            is_llm_error = any(phrase in error_str for phrase in [
+                "404", "not found", "does not exist", "not supported", 
+                "429", "quota", "rate limit", "insufficient_quota",
+                "modelo", "model", "api key", "authentication", "authorization"
+            ])
+            is_db_error = any(phrase in error_str for phrase in [
+                "connection", "conexão", "lost", "perdida", "closed", 
+                "broken", "timeout", "database", "banco"
+            ])
             
             yield (
                 "data: \n\n❌ **Erro ao processar sua pergunta**\n\n"
@@ -726,20 +772,52 @@ async def stream_chat_get(
                 "data: - Tentativa de gerar SQL com LangChain\n"
                 "data: - Tentativa de executar consulta no banco de dados\n\n"
                 "data: **Erro encontrado:**\n"
-                f"data: ```\n{str(e)}\n```\n\n"
-                "data: **Possíveis motivos:**\n"
-                "data: - Problema de conexão com o banco de dados\n"
-                "data: - Erro na geração do SQL pelo LangChain\n"
-                "data: - Dados ou estrutura do banco diferentes do esperado\n\n"
-                "data: **Sugestões:**\n"
-                "data: - Verifique se o banco de dados está acessível\n"
-                "data: - Tente reformular a pergunta\n"
-                "data: - Verifique os logs do sistema para mais detalhes\n\n"
+                f"data: ```\n{str(e)[:500]}\n```\n\n"
             )
+            
+            # Mensagens específicas por tipo de erro
+            if is_llm_error:
+                yield (
+                    "data: **Possíveis motivos (Provedor de IA):**\n"
+                    "data: - Modelo de IA não encontrado ou desatualizado (ex: gemini-pro não existe mais)\n"
+                    "data: - Quota/rate limit atingido em todos os provedores configurados\n"
+                    "data: - Chave de API inválida ou expirada\n"
+                    "data: - Circuit breaker aberto após múltiplas falhas\n\n"
+                    "data: **Sugestões:**\n"
+                    "data: - Verifique as variáveis de ambiente no Render (GOOGLE_API_KEY, OPENAI_API_KEY)\n"
+                    "data: - Aguarde alguns minutos e tente novamente (circuit breakers fecham após 5 minutos)\n"
+                    "data: - O sistema tentou usar fallback, mas pode precisar de configuração de API\n\n"
+                )
+            elif is_db_error:
+                yield (
+                    "data: **Possíveis motivos (Banco de Dados):**\n"
+                    "data: - Conexão com o banco de dados foi perdida\n"
+                    "data: - Timeout na conexão (banco pode estar sobrecarregado)\n"
+                    "data: - Problemas temporários de rede\n"
+                    "data: - Banco de dados indisponível ou em manutenção\n\n"
+                    "data: **Sugestões:**\n"
+                    "data: - O sistema tentará reconectar automaticamente\n"
+                    "data: - Aguarde alguns segundos e tente novamente\n"
+                    "data: - Verifique se o banco de dados está acessível\n\n"
+                )
+            else:
+                yield (
+                    "data: **Possíveis motivos:**\n"
+                    "data: - Problema de conexão com o banco de dados\n"
+                    "data: - Erro na geração do SQL pelo LangChain\n"
+                    "data: - Dados ou estrutura do banco diferentes do esperado\n"
+                    "data: - Problemas temporários de rede ou serviço\n\n"
+                    "data: **Sugestões:**\n"
+                    "data: - Verifique se o banco de dados está acessível\n"
+                    "data: - Tente reformular a pergunta\n"
+                    "data: - Aguarde alguns segundos e tente novamente\n"
+                    "data: - Verifique os logs do sistema para mais detalhes\n\n"
+                )
             
             # Log detalhado do erro para debug
             print(f"[chat] ERRO ao processar pergunta '{prompt}': {e}")
             print(f"[chat] Traceback completo:\n{error_trace}")
+            logger.error(f"[chat] ERRO ao processar pergunta: {e}", exc_info=True)
             
             yield "data: [DONE]\n\n"
             return

@@ -221,34 +221,45 @@ class LLMService:
             
         try:
             if provider.provider_type == ProviderType.GOOGLE and ChatGoogleGenerativeAI:
-                # Google Gemini: não especificar modelo deixa a biblioteca usar o padrão
-                # Isso evita problemas com versões de API e modelos não disponíveis
+                # Google Gemini: usa gemini-1.5-flash (gratuito, rápido e amplamente disponível)
+                # gemini-pro não está mais disponível na API v1beta
                 if not provider.api_key:
                     logger.error("Google API key não fornecida")
                     return None
                 
-                # Tenta primeiro sem especificar modelo (usa padrão da biblioteca)
+                # Usa gemini-1.5-flash como modelo padrão (gratuito e estável)
                 try:
                     return ChatGoogleGenerativeAI(
+                        model="gemini-1.5-flash",  # Modelo gratuito e estável (não mais gemini-pro)
                         temperature=0,
                         google_api_key=provider.api_key,
                         timeout=timeout_seconds,
                         max_retries=max_retries,
                     )
                 except Exception as e:
-                    logger.warning(f"Erro ao criar ChatGoogleGenerativeAI sem modelo: {e}, tentando gemini-pro...")
-                    # Fallback para gemini-pro (modelo mais básico e amplamente suportado)
+                    logger.warning(f"Erro ao criar ChatGoogleGenerativeAI com gemini-1.5-flash: {e}, tentando gemini-1.5-pro...")
+                    # Fallback para gemini-1.5-pro se flash não funcionar
                     try:
                         return ChatGoogleGenerativeAI(
-                            model="gemini-pro",  # Modelo básico e amplamente suportado
+                            model="gemini-1.5-pro",  # Alternativa mais poderosa
                             temperature=0,
                             google_api_key=provider.api_key,
                             timeout=timeout_seconds,
                             max_retries=max_retries,
                         )
                     except Exception as e2:
-                        logger.error(f"Erro ao criar ChatGoogleGenerativeAI com gemini-pro: {e2}")
-                        return None
+                        logger.error(f"Erro ao criar ChatGoogleGenerativeAI com gemini-1.5-pro: {e2}")
+                        # Última tentativa sem especificar modelo (deixa biblioteca escolher)
+                        try:
+                            return ChatGoogleGenerativeAI(
+                                temperature=0,
+                                google_api_key=provider.api_key,
+                                timeout=timeout_seconds,
+                                max_retries=max_retries,
+                            )
+                        except Exception as e3:
+                            logger.error(f"Erro ao criar ChatGoogleGenerativeAI sem modelo específico: {e3}")
+                            return None
             elif provider.provider_type == ProviderType.ANTHROPIC and ChatAnthropic:
                 # Modelos Claude disponíveis: claude-3-5-sonnet-20241022, claude-3-opus-20240229, claude-3-sonnet-20240229, claude-3-haiku-20240307
                 # Usando claude-3-5-sonnet-20241022 (mais recente) ou fallback para haiku (mais barato)
