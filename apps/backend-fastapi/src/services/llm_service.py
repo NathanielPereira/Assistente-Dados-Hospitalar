@@ -221,11 +221,9 @@ class LLMService:
             
         try:
             if provider.provider_type == ProviderType.GOOGLE and ChatGoogleGenerativeAI:
-                # Google Gemini: modelos disponíveis na API v1
-                # gemini-1.0-pro é o modelo mais recente e estável
-                # Se falhar, a biblioteca pode tentar automaticamente outros modelos
+                # Google Gemini: usando gemini-2.5-flash (modelo mais recente e rápido)
                 return ChatGoogleGenerativeAI(
-                    model="gemini-1.0-pro",  # Modelo estável para API v1 (não v1beta)
+                    model="gemini-2.5-flash",  # Modelo mais recente e rápido
                     temperature=0,
                     google_api_key=provider.api_key,
                     timeout=timeout_seconds,
