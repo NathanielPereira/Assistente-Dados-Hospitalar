@@ -347,12 +347,13 @@ class SQLAgentService:
                 error_str = str(e).lower()
                 is_rate_limit = "429" in error_str or "rate limit" in error_str or "quota" in error_str or "insufficient_quota" in error_str
                 is_timeout = "timeout" in error_str
+                is_not_found = "404" in error_str or "not found" in error_str or "does not exist" in error_str or "not supported" in error_str
                 
                 logger.error(f"[sql_agent] ERRO ao gerar SQL com LangChain: {e}")
                 print(f"[sql_agent] ERRO ao gerar SQL com LangChain: {e}")
                 
-                # Se for erro de rate limit/quota, tenta fazer fallback para outro provedor
-                if is_rate_limit and self.llm:
+                # Se for erro de rate limit/quota, 404 (modelo não encontrado), ou timeout, tenta fazer fallback para outro provedor
+                if (is_rate_limit or is_not_found or is_timeout) and self.llm:
                     # Identifica qual provedor falhou
                     failed_provider_id = None
                     try:
@@ -366,8 +367,9 @@ class SQLAgentService:
                         pass
                     
                     if failed_provider_id:
-                        logger.warning(f"[sql_agent] ⚠️ Provedor {failed_provider_id} atingiu limite de quota, tentando fallback para outro provedor...")
-                        print(f"[sql_agent] ⚠️ Provedor {failed_provider_id} atingiu limite de quota, tentando fallback para outro provedor...")
+                        error_type = "quota/rate limit" if is_rate_limit else ("modelo não encontrado" if is_not_found else "timeout")
+                        logger.warning(f"[sql_agent] ⚠️ Provedor {failed_provider_id} falhou ({error_type}), tentando fallback para outro provedor...")
+                        print(f"[sql_agent] ⚠️ Provedor {failed_provider_id} falhou ({error_type}), tentando fallback para outro provedor...")
                         
                         # Tenta obter outro LLM
                         try:

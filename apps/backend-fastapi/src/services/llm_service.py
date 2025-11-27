@@ -222,7 +222,7 @@ class LLMService:
         try:
             if provider.provider_type == ProviderType.GOOGLE and ChatGoogleGenerativeAI:
                 return ChatGoogleGenerativeAI(
-                    model="gemini-1.5-flash",  # Atualizado: gemini-pro foi deprecado
+                    model="gemini-pro",  # Modelo estável e amplamente suportado
                     temperature=0,
                     google_api_key=provider.api_key,
                     timeout=timeout_seconds,
@@ -302,6 +302,9 @@ class LLMService:
         if "429" in error_str or "rate limit" in error_str or "quota" in error_str or "insufficient_quota" in error_str:
             provider.mark_rate_limited()
             logger.warning(f"⚠️ Provedor {provider_id} atingiu limite de quota/rate limit")
+        elif "404" in error_str or "not found" in error_str or "does not exist" in error_str or "not supported" in error_str:
+            provider.mark_error()
+            logger.error(f"❌ Provedor {provider_id} com erro de modelo não encontrado (404): {error}")
         elif "401" in error_str or "403" in error_str:
             provider.mark_error()
             logger.error(f"❌ Provedor {provider_id} com erro de autenticação/autorização")
