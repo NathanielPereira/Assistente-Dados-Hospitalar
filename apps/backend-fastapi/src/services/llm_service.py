@@ -221,10 +221,11 @@ class LLMService:
             
         try:
             if provider.provider_type == ProviderType.GOOGLE and ChatGoogleGenerativeAI:
-                # Google Gemini: usar modelo padrão ou gemini-1.0-pro (mais compatível)
-                # Se não especificar model, usa o padrão da biblioteca
+                # Google Gemini: modelos disponíveis na API v1
+                # gemini-1.0-pro é o modelo mais recente e estável
+                # Se falhar, a biblioteca pode tentar automaticamente outros modelos
                 return ChatGoogleGenerativeAI(
-                    model=None,  # Usa modelo padrão da biblioteca (geralmente gemini-pro ou gemini-1.0-pro)
+                    model="gemini-1.0-pro",  # Modelo estável para API v1 (não v1beta)
                     temperature=0,
                     google_api_key=provider.api_key,
                     timeout=timeout_seconds,
