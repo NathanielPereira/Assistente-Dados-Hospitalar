@@ -221,32 +221,33 @@ class LLMService:
             
         try:
             if provider.provider_type == ProviderType.GOOGLE and ChatGoogleGenerativeAI:
-                # Google Gemini: usando gemini-1.5-flash (modelo gratuito e estável)
-                # Este é o modelo mais estável e amplamente suportado na API gratuita
+                # Google Gemini: não especificar modelo deixa a biblioteca usar o padrão
+                # Isso evita problemas com versões de API e modelos não disponíveis
                 if not provider.api_key:
                     logger.error("Google API key não fornecida")
                     return None
                 
+                # Tenta primeiro sem especificar modelo (usa padrão da biblioteca)
                 try:
                     return ChatGoogleGenerativeAI(
-                        model="gemini-1.5-flash",  # Modelo gratuito e estável
                         temperature=0,
                         google_api_key=provider.api_key,
                         timeout=timeout_seconds,
                         max_retries=max_retries,
                     )
                 except Exception as e:
-                    logger.error(f"Erro ao criar ChatGoogleGenerativeAI: {e}")
-                    # Tenta sem especificar modelo (usa padrão)
+                    logger.warning(f"Erro ao criar ChatGoogleGenerativeAI sem modelo: {e}, tentando gemini-pro...")
+                    # Fallback para gemini-pro (modelo mais básico e amplamente suportado)
                     try:
                         return ChatGoogleGenerativeAI(
+                            model="gemini-pro",  # Modelo básico e amplamente suportado
                             temperature=0,
                             google_api_key=provider.api_key,
                             timeout=timeout_seconds,
                             max_retries=max_retries,
                         )
                     except Exception as e2:
-                        logger.error(f"Erro ao criar ChatGoogleGenerativeAI sem modelo: {e2}")
+                        logger.error(f"Erro ao criar ChatGoogleGenerativeAI com gemini-pro: {e2}")
                         return None
             elif provider.provider_type == ProviderType.ANTHROPIC and ChatAnthropic:
                 # Modelos Claude disponíveis: claude-3-5-sonnet-20241022, claude-3-opus-20240229, claude-3-sonnet-20240229, claude-3-haiku-20240307
